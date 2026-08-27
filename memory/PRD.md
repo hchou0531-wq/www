@@ -125,6 +125,13 @@ User choices: Discord linked by pasting user ID (no OAuth keys); Last.fm API key
 
 ## Prioritized backlog
 - P0: Add LASTFM_API_KEY (user-provided) to enable scrobbles/now-playing
+
+## Implemented (2026-07, iteration 24 — post-import)
+- LASTFM_API_KEY added to backend/.env (user-provided) — Last.fm proxy verified live
+- Song progress bar: thin purple line along the bottom edge of the floating music player, advances with playback
+- View milestones on dashboard Overview → analytics: chips for 50/100/500/1000 visits, reached state with check, progress bar + "N to go" toward next, celebration line when a milestone is crossed
+- Digest opt-out: dashboard toggle beside the digest test button; POST /api/auth/digest-opt-out; Sunday loop skips opted-out users (manual "send now" still works)
+
 - P1: Song progress bar on floating player; view milestones on dashboard
 - P2: Digest opt-out toggle; Cloudflare Turnstile on signup
 - P3: Custom domain support

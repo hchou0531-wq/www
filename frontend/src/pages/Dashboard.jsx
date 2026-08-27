@@ -48,6 +48,8 @@ function ThemePreview({ id, locked }) {
   );
 }
 
+const MILESTONES = [50, 100, 500, 1000];
+
 const TABS = [
   { id: "overview", label: "Overview", icon: LayoutGrid },
   { id: "customize", label: "Customize", icon: Palette },
@@ -97,6 +99,23 @@ export default function Dashboard() {
   const [favoriteTrack, setFavoriteTrack] = useState(user.favorite_track || "");
   const [newUsername, setNewUsername] = useState(user.username);
   const [unameStatus, setUnameStatus] = useState(null);
+  const [digestOptOut, setDigestOptOut] = useState(user.digest_opt_out || false);
+
+  const totalViews = user.views || 0;
+  const nextMilestone = MILESTONES.find((m) => totalViews < m);
+  const latestReached = [...MILESTONES].reverse().find((m) => totalViews >= m);
+
+  const toggleDigest = async (val) => {
+    setDigestOptOut(val);
+    try {
+      const r = await api.post("/auth/digest-opt-out", { opt_out: val });
+      setUser(r.data);
+      toast.success(val ? "Sunday digest paused" : "Sunday digest back on");
+    } catch (e) {
+      setDigestOptOut(!val);
+      toast.error(errMsg(e, "Could not save"));
+    }
+  };
 
   useEffect(() => {
     const name = newUsername.trim().toLowerCase();
@@ -468,6 +487,52 @@ export default function Dashboard() {
                     <span className="text-sm text-white/40">page visits</span>
                   </div>
                   <div className="mt-4"><Sparkline data={user.views_daily} /></div>
+                  <div data-testid="milestones-card" className="mt-5 rounded-xl border border-white/10 bg-white/5 p-4">
+                    <div className="mb-3 flex items-center justify-between">
+                      <p className="text-xs font-medium uppercase tracking-[0.16em] text-white/40">view milestones</p>
+                      {nextMilestone ? (
+                        <span data-testid="milestone-next" className="text-[11px] text-white/40">{nextMilestone - totalViews} to go for {nextMilestone}</span>
+                      ) : (
+                        <span data-testid="milestone-all-done" className="text-[11px] text-[#A78BFA]">every milestone reached</span>
+                      )}
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {MILESTONES.map((m) => {
+                        const reached = totalViews >= m;
+                        return (
+                          <span
+                            key={m}
+                            data-testid={`milestone-${m}`}
+                            className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium ${reached ? "bg-[#8B5CF6]/20 text-[#C4B5FD]" : "bg-white/5 text-white/30"}`}
+                          >
+                            {reached ? <Check size={11} /> : <Sparkles size={11} />} {m} visits
+                          </span>
+                        );
+                      })}
+                    </div>
+                    {nextMilestone && (
+                      <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-white/10">
+                        <motion.div
+                          data-testid="milestone-progress"
+                          initial={{ width: 0 }}
+                          animate={{ width: `${Math.min((totalViews / nextMilestone) * 100, 100)}%` }}
+                          transition={{ duration: 0.9, ease }}
+                          className="h-full rounded-full bg-gradient-to-r from-[#8B5CF6] to-[#C4B5FD]"
+                        />
+                      </div>
+                    )}
+                    {latestReached && (
+                      <motion.p
+                        data-testid="milestone-celebration"
+                        initial={{ opacity: 0, y: 6 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.6, ease, delay: 0.3 }}
+                        className="mt-3 flex items-center gap-1.5 text-xs text-[#A78BFA]"
+                      >
+                        <Sparkles size={12} /> you crossed {latestReached} visits — keep it rolling
+                      </motion.p>
+                    )}
+                  </div>
                   <button
                     data-testid="digest-test-btn"
                     onClick={async () => {
@@ -482,6 +547,13 @@ export default function Dashboard() {
                   >
                     email me this week's digest now
                   </button>
+                  <div className="mt-3 flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-white/5 px-4 py-3">
+                    <div>
+                      <p className="text-sm font-medium">weekly digest email</p>
+                      <p className="text-xs text-white/40">your stats, every Sunday — pause it anytime</p>
+                    </div>
+                    <Switch data-testid="digest-opt-out-switch" checked={!digestOptOut} onCheckedChange={(v) => toggleDigest(!v)} />
+                  </div>
                   {user.referrers?.length > 0 && (
                     <ul data-testid="stats-referrers" className="mt-5 grid gap-2 sm:grid-cols-2">
                       {user.referrers.map((r, i) => (

@@ -142,6 +142,7 @@ def public_user(u: dict, owner: bool = False) -> dict:
         data["username_changed_at"] = u.get("username_changed_at")
         data["username_history"] = u.get("username_history", [])
         data["views"] = u.get("views", 0)
+        data["digest_opt_out"] = u.get("digest_opt_out", False)
         data["referrers"] = sorted(u.get("referrers", []), key=lambda r: r.get("count", 0), reverse=True)[:6]
         by_day = u.get("views_by_day", {})
         today = datetime.now(timezone.utc).date()
@@ -695,7 +696,7 @@ async def send_weekly_digests(force_user_id=None) -> int:
         query["_id"] = force_user_id
     sent = 0
     async for u in db.users.find(query):
-        if not force_user_id and u.get("last_digest_week") == week:
+        if not force_user_id and (u.get("last_digest_week") == week or u.get("digest_opt_out")):
             continue
         by_day = u.get("views_by_day", {})
         today = datetime.now(timezone.utc).date()
@@ -721,6 +722,17 @@ async def send_weekly_digests(force_user_id=None) -> int:
 async def digest_test(user: dict = Depends(current_user)):
     await send_weekly_digests(force_user_id=user["_id"])
     return {"ok": True, "sent_to": user["email"]}
+
+
+class DigestOptOut(BaseModel):
+    opt_out: bool
+
+
+@api_router.post("/auth/digest-opt-out")
+async def set_digest_opt_out(body: DigestOptOut, user: dict = Depends(current_user)):
+    await db.users.update_one({"_id": user["_id"]}, {"$set": {"digest_opt_out": body.opt_out}})
+    fresh = await db.users.find_one({"_id": user["_id"]})
+    return public_user(fresh, owner=True)
 
 
 async def digest_loop():

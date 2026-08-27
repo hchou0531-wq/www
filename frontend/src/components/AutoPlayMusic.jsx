@@ -9,6 +9,7 @@ export function AutoPlayMusic({ query, songUrl }) {
   const [playing, setPlaying] = useState(false);
   const [blocked, setBlocked] = useState(false);
   const [volume, setVolume] = useState(0.5);
+  const [progress, setProgress] = useState(0);
   const audioRef = useRef(null);
 
   useEffect(() => {
@@ -52,13 +53,17 @@ export function AutoPlayMusic({ query, songUrl }) {
         onPlay={() => setPlaying(true)}
         onPause={() => setPlaying(false)}
         onEnded={() => setPlaying(false)}
+        onTimeUpdate={() => {
+          const a = audioRef.current;
+          if (a?.duration) setProgress(a.currentTime / a.duration);
+        }}
       />
       <motion.div
         data-testid="music-player"
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, ease, delay: 0.4 }}
-        className="fixed bottom-5 right-5 z-50 flex items-center gap-3 rounded-2xl border border-border bg-card/90 px-3.5 py-2.5 shadow-[0_12px_40px_rgba(0,0,0,0.25)] backdrop-blur-xl"
+        className="fixed bottom-5 right-5 z-50 flex items-center gap-3 overflow-hidden rounded-2xl border border-border bg-card/90 px-3.5 py-2.5 shadow-[0_12px_40px_rgba(0,0,0,0.25)] backdrop-blur-xl"
       >
         {track.image_url && <img src={track.image_url} alt="" className="h-9 w-9 rounded-lg object-cover" />}
         <div className="max-w-[130px] min-w-0">
@@ -86,6 +91,9 @@ export function AutoPlayMusic({ query, songUrl }) {
             title="volume"
             className="w-16 accent-[#8B5CF6]"
           />
+        </div>
+        <div data-testid="music-progress-track" className="absolute bottom-0 left-0 right-0 h-[2px] bg-white/10">
+          <div data-testid="music-progress" className="h-full bg-[#8B5CF6] transition-[width] duration-300 ease-linear" style={{ width: `${Math.min(progress, 1) * 100}%` }} />
         </div>
       </motion.div>
       {blocked && !playing && (
