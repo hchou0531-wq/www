@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
+import { MobileMenu } from "../components/MobileMenu";
 import { ArrowRight, ArrowUpRight, Fingerprint, AudioLines, MessageSquare, Link2 } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "../context/AuthContext";
@@ -24,25 +25,41 @@ function Nav() {
       <nav data-testid="main-nav" className="flex w-full max-w-2xl items-center justify-between rounded-full border border-border/80 bg-white/80 px-5 py-2.5 shadow-sm backdrop-blur-xl">
         <Link to="/" data-testid="nav-brand" className="font-serif text-xl font-semibold italic">dontblink</Link>
         <div className="flex items-center gap-2">
-          {user ? (
-            <>
-              <Link data-testid="nav-my-page" to={`/${user.username}`} className="rounded-full px-4 py-2 text-sm text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground">
-                my page
-              </Link>
-              <Link data-testid="nav-settings" to="/settings" className="rounded-full bg-ink px-4 py-2 text-sm text-paper transition-colors hover:bg-ink/85">
-                settings
-              </Link>
-            </>
-          ) : (
-            <>
-              <Link data-testid="nav-login" to="/login" className="rounded-full px-4 py-2 text-sm text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground">
-                log in
-              </Link>
-              <Link data-testid="nav-claim" to="/register" className="group inline-flex items-center gap-1.5 rounded-full bg-ink px-4 py-2 text-sm text-paper transition-colors hover:bg-ink/85">
-                claim yours <ArrowRight size={14} className="transition-transform duration-300 group-hover:translate-x-0.5" />
-              </Link>
-            </>
-          )}
+          <div className="hidden items-center gap-2 sm:flex">
+            {user ? (
+              <>
+                <Link data-testid="nav-my-page" to={`/${user.username}`} className="rounded-full px-4 py-2 text-sm text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground">
+                  my page
+                </Link>
+                <Link data-testid="nav-settings" to="/settings" className="rounded-full bg-ink px-4 py-2 text-sm text-paper transition-colors hover:bg-ink/85">
+                  settings
+                </Link>
+              </>
+            ) : (
+              <>
+                <Link data-testid="nav-login" to="/login" className="rounded-full px-4 py-2 text-sm text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground">
+                  log in
+                </Link>
+                <Link data-testid="nav-claim" to="/register" className="group inline-flex items-center gap-1.5 rounded-full bg-ink px-4 py-2 text-sm text-paper transition-colors hover:bg-ink/85">
+                  claim yours <ArrowRight size={14} className="transition-transform duration-300 group-hover:translate-x-0.5" />
+                </Link>
+              </>
+            )}
+          </div>
+          <MobileMenu
+            testid="nav-mobile-menu"
+            links={
+              user
+                ? [
+                    { to: `/${user.username}`, label: "my page", testid: "mnav-my-page" },
+                    { to: "/settings", label: "settings", testid: "mnav-settings", primary: true },
+                  ]
+                : [
+                    { to: "/login", label: "log in", testid: "mnav-login" },
+                    { to: "/register", label: "claim yours", testid: "mnav-claim", primary: true },
+                  ]
+            }
+          />
         </div>
       </nav>
     </header>

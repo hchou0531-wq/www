@@ -150,6 +150,10 @@ User choices: Discord linked by pasting user ID (no OAuth keys); Last.fm API key
 - Music player progress bar v2: seekable purple bar with elapsed/total timestamps (tabular-nums), hover grow + dot handle, click-to-seek verified. Replaces the thin edge line.
 - dntblink Discord presence: set discord_id=94490510688792576 (public Lanyard demo user "Phineas", MOCKED) — card shows banner, avatar, status pill, Spotify vinyl state. Swap in a real Discord ID for real presence.
 
+## Implemented (2026-07, iteration 29)
+- Mobile dropdown nav: shared MobileMenu component (hamburger → animated glass dropdown, outside-click close, auto-close on route change, light/dark variants). Wired into the dark Nav (LandingDark, shared by all InfoPages) and the light Landing nav. Desktop nav hidden below sm breakpoint; verified at 390px including menu navigation.
+
+
 - P1: Song progress bar on floating player; view milestones on dashboard
 - P2: Digest opt-out toggle; Cloudflare Turnstile on signup
 - P3: Custom domain support

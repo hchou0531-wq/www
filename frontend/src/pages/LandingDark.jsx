@@ -10,6 +10,7 @@ import { DiscordCard } from "../components/DiscordCard";
 import { RolePills } from "../components/RolePills";
 import { prettyLabel, getDomain } from "../lib/favicon";
 import { api, errMsg } from "../lib/api";
+import { MobileMenu } from "../components/MobileMenu";
 
 const PLATFORMS = ["Discord", "Last.fm", "Spotify", "GitHub", "YouTube", "Instagram", "X", "Twitch", "Substack", "SoundCloud"];
 
@@ -40,18 +41,38 @@ export function Nav() {
           <Link to="/pricing" data-testid="nav-pricing" className="rounded-full px-3.5 py-2 text-sm text-white/60 transition-colors hover:text-white">pricing</Link>
         </div>
         <div className="flex items-center gap-2">
-          {user ? (
-            <Link data-testid="nav-settings" to="/settings" className="rounded-full bg-[#8B5CF6] px-4 py-2 text-sm font-medium text-white shadow-[0_0_24px_rgba(139,92,246,0.45)] transition-all hover:bg-[#7C4DEF] hover:shadow-[0_0_32px_rgba(139,92,246,0.6)]">
-              dashboard
-            </Link>
-          ) : (
-            <>
-              <Link data-testid="nav-login" to="/login" className="rounded-full px-4 py-2 text-sm text-white/60 transition-colors hover:text-white">log in</Link>
-              <Link data-testid="nav-claim" to="/register" className="rounded-full bg-[#8B5CF6] px-4 py-2 text-sm font-medium text-white shadow-[0_0_24px_rgba(139,92,246,0.45)] transition-all hover:bg-[#7C4DEF] hover:shadow-[0_0_32px_rgba(139,92,246,0.6)]">
-                claim yours
+          <div className="hidden items-center gap-2 sm:flex">
+            {user ? (
+              <Link data-testid="nav-settings" to="/settings" className="rounded-full bg-[#8B5CF6] px-4 py-2 text-sm font-medium text-white shadow-[0_0_24px_rgba(139,92,246,0.45)] transition-all hover:bg-[#7C4DEF] hover:shadow-[0_0_32px_rgba(139,92,246,0.6)]">
+                dashboard
               </Link>
-            </>
-          )}
+            ) : (
+              <>
+                <Link data-testid="nav-login" to="/login" className="rounded-full px-4 py-2 text-sm text-white/60 transition-colors hover:text-white">log in</Link>
+                <Link data-testid="nav-claim" to="/register" className="rounded-full bg-[#8B5CF6] px-4 py-2 text-sm font-medium text-white shadow-[0_0_24px_rgba(139,92,246,0.45)] transition-all hover:bg-[#7C4DEF] hover:shadow-[0_0_32px_rgba(139,92,246,0.6)]">
+                  claim yours
+                </Link>
+              </>
+            )}
+          </div>
+          <MobileMenu
+            dark
+            testid="nav-mobile-menu"
+            links={[
+              { to: "/compare", label: "compare", testid: "mnav-compare" },
+              { to: "/leaderboard", label: "leaderboard", testid: "mnav-leaderboard" },
+              { to: "/pricing", label: "pricing", testid: "mnav-pricing" },
+              ...(user
+                ? [
+                    { to: `/${user.username}`, label: "my page", testid: "mnav-my-page" },
+                    { to: "/settings", label: "dashboard", testid: "mnav-settings", primary: true },
+                  ]
+                : [
+                    { to: "/login", label: "log in", testid: "mnav-login" },
+                    { to: "/register", label: "claim yours", testid: "mnav-claim", primary: true },
+                  ]),
+            ]}
+          />
         </div>
       </motion.nav>
     </header>
