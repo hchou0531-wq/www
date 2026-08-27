@@ -8,6 +8,7 @@ import os
 import re
 import time
 import uuid
+import secrets
 import asyncio
 import ipaddress
 import logging
@@ -144,6 +145,7 @@ def public_user(u: dict, owner: bool = False) -> dict:
         data["username_history"] = u.get("username_history", [])
         data["views"] = u.get("views", 0)
         data["digest_opt_out"] = u.get("digest_opt_out", False)
+        data["email_verified"] = bool(u.get("email_verified"))
         data["referrers"] = sorted(u.get("referrers", []), key=lambda r: r.get("count", 0), reverse=True)[:6]
         by_day = u.get("views_by_day", {})
         today = datetime.now(timezone.utc).date()
@@ -295,10 +297,15 @@ async def register(body: RegisterBody, request: Request):
         "discord_id": None,
         "lastfm_username": None,
         "links": [],
+        "email_verified": False,
         "created_at": datetime.now(timezone.utc).isoformat(),
     }
     res = await db.users.insert_one(doc)
     doc["_id"] = res.inserted_id
+    try:
+        await send_verification_code(email, username)
+    except Exception:
+        pass
     return {"token": make_token(str(res.inserted_id)), "user": public_user(doc, owner=True)}
 
 
@@ -315,6 +322,64 @@ async def login(body: LoginBody, request: Request):
 @api_router.get("/auth/me")
 async def me(user: dict = Depends(current_user)):
     return public_user(user, owner=True)
+
+
+# ---------- Email verification ----------
+
+async def send_verification_code(email: str, username: str):
+    code = "".join(secrets.choice("0123456789") for _ in range(6))
+    await db.email_codes.delete_many({"email": email})
+    await db.email_codes.insert_one({
+        "email": email,
+        "code": code,
+        "expires_at": (datetime.now(timezone.utc) + timedelta(minutes=10)).isoformat(),
+        "attempts": 0,
+    })
+    html = (
+        '<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>'
+        '<td style="background:#0d0714;padding:32px;font-family:Arial,sans-serif">'
+        '<p style="margin:0 0 8px;color:#A78BFA;font-size:11px;letter-spacing:2px;text-transform:uppercase">dontblink</p>'
+        f'<h1 style="margin:0 0 16px;color:#ffffff;font-size:22px">welcome, @{escape(username)}</h1>'
+        '<p style="margin:0 0 16px;color:#9f93b5;font-size:14px">here is your verification code — it expires in 10 minutes:</p>'
+        f'<p style="margin:0 0 24px;font-size:34px;font-weight:bold;letter-spacing:8px;color:#ffffff">{code}</p>'
+        f'<p style="font-size:12px;color:#6b5f80">sent by {escape(EMAIL_FROM_NAME)} — if you did not sign up, just ignore this email. we will never ask for your password by email.</p>'
+        '</td></tr></table>'
+    )
+    await send_email(to=email, subject=f"{code} is your dontblink code", html=html)
+
+
+class VerifyBody(BaseModel):
+    code: str
+
+
+@api_router.post("/auth/verify-email")
+async def verify_email(body: VerifyBody, user: dict = Depends(current_user)):
+    rate_limit(f"verify:{user['_id']}", limit=10, window=600)
+    if user.get("email_verified"):
+        return public_user(user, owner=True)
+    doc = await db.email_codes.find_one({"email": user["email"]})
+    if not doc:
+        raise HTTPException(400, "No code on file — hit resend to get a new one")
+    if datetime.now(timezone.utc) > datetime.fromisoformat(doc["expires_at"]):
+        raise HTTPException(400, "That code expired — hit resend for a fresh one")
+    if doc.get("attempts", 0) >= 5:
+        raise HTTPException(429, "Too many wrong tries — request a new code")
+    if doc["code"] != body.code.strip():
+        await db.email_codes.update_one({"_id": doc["_id"]}, {"$inc": {"attempts": 1}})
+        raise HTTPException(400, "Wrong code — check the email and try again")
+    await db.users.update_one({"_id": user["_id"]}, {"$set": {"email_verified": True}})
+    await db.email_codes.delete_many({"email": user["email"]})
+    fresh = await db.users.find_one({"_id": user["_id"]})
+    return public_user(fresh, owner=True)
+
+
+@api_router.post("/auth/resend-code")
+async def resend_code(user: dict = Depends(current_user)):
+    if user.get("email_verified"):
+        return {"ok": True, "already_verified": True}
+    rate_limit(f"resend:{user['_id']}", limit=3, window=600)
+    await send_verification_code(user["email"], user["username"])
+    return {"ok": True}
 
 
 @api_router.put("/auth/profile")

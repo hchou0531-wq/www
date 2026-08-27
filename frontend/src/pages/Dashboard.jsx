@@ -70,6 +70,28 @@ export default function Dashboard() {
   const [tabMenuOpen, setTabMenuOpen] = useState(false);
   const tabMenuRef = useRef(null);
   const activeTab = TABS.find((t) => t.id === tab);
+  const touchStart = useRef(null);
+
+  const onTouchStart = (e) => {
+    const t = e.touches?.[0] || e.changedTouches?.[0];
+    if (!t) return;
+    touchStart.current = { x: t.clientX, y: t.clientY };
+  };
+
+  const onTouchEnd = (e) => {
+    const t = e.changedTouches?.[0];
+    if (!touchStart.current || !t) return;
+    const dx = t.clientX - touchStart.current.x;
+    const dy = t.clientY - touchStart.current.y;
+    touchStart.current = null;
+    if (Math.abs(dx) < 70 || Math.abs(dy) > Math.abs(dx)) return;
+    const idx = TABS.findIndex((t) => t.id === tab);
+    const next = dx < 0 ? idx + 1 : idx - 1;
+    if (next >= 0 && next < TABS.length) {
+      setTab(TABS[next].id);
+      setTabMenuOpen(false);
+    }
+  };
 
   useEffect(() => {
     if (!tabMenuOpen) return;
@@ -454,7 +476,7 @@ export default function Dashboard() {
           </div>
         </div>
 
-        <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:px-8">
+        <main data-testid="dashboard-main" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd} className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:px-8">
           <motion.div key={tab} initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, ease }}>
             {tab === "overview" && (
               <div className="space-y-6">

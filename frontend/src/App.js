@@ -6,6 +6,7 @@ import { AuthProvider, useAuth } from "@/context/AuthContext";
 import Landing from "@/pages/LandingDark";
 import { ComparePage, LeaderboardPage, PricingPage } from "@/pages/InfoPages";
 import AuthPage from "@/pages/Auth";
+import Verify from "@/pages/Verify";
 import Settings from "@/pages/Dashboard";
 import Profile from "@/pages/Profile";
 
@@ -69,6 +70,7 @@ function AppInner() {
         <Route path="/" element={<Landing />} />
         <Route path="/login" element={<AuthPage mode="login" />} />
         <Route path="/register" element={<AuthPage mode="register" />} />
+        <Route path="/verify" element={<Verify />} />
         <Route path="/compare" element={<ComparePage />} />
         <Route path="/leaderboard" element={<LeaderboardPage />} />
         <Route path="/pricing" element={<PricingPage />} />

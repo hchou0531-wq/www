@@ -82,9 +82,13 @@ export default function AuthPage({ mode }) {
     try {
       if (isRegister) {
         const user = await register(username, email, password, website, tsToken);
-        navigate("/settings", { state: { welcome: true, username: user.username } });
+        navigate("/verify");
       } else {
         const user = await login(identifier, password);
+        if (!user.email_verified) {
+          navigate("/verify");
+          return;
+        }
         navigate(`/${user.username}`);
       }
     } catch (err) {

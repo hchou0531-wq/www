@@ -167,6 +167,10 @@ User choices: Discord linked by pasting user ID (no OAuth keys); Last.fm API key
 - Music player mobile: max-w-[calc(100vw-2rem)], volume slider hidden below sm, narrower seek bar, tap hint repositioned; profile page gets bottom clearance (pb-36) when player is present.
 - Global overflow-x guard on html/body. Verified at 375px: grid 343px, 0 overflowing elements, no page overflow on /, /leaderboard, /pricing, /compare, /login, /register, /tomo, /dntblink.
 
+## Implemented (2026-07, iteration 33)
+- Email verification on signup: 6-digit code emailed via managed Resend (EMAIL_FROM_NAME=dontblink), 10-min expiry, 5-attempt cap, rate-limited verify (10/10min) and resend (3/10min). New users start email_verified=false; register → /verify page; unverified logins redirect to /verify. Existing 4 users grandfathered as verified. Codes stored in email_codes collection, single-use (deleted on success). E2E verified via UI: register → verify page → code entry → dashboard; wrong codes rejected.
+
+
 
 - P1: Song progress bar on floating player; view milestones on dashboard
 - P2: Digest opt-out toggle; Cloudflare Turnstile on signup
