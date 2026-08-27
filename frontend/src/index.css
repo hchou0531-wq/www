@@ -195,15 +195,9 @@ html,
 body {
   overflow-x: hidden;
 
-@property --role-angle {
-  syntax: "<angle>";
-  initial-value: 0deg;
-  inherits: false;
-}
-
-@keyframes role-spin {
+@keyframes role-rotate {
   to {
-    --role-angle: 360deg;
+    rotate: 360deg;
   }
 }
 
@@ -218,22 +212,43 @@ body {
 }
 
 .role-flair {
-  border-color: transparent;
-  background:
-    linear-gradient(hsl(var(--secondary)), hsl(var(--secondary))) padding-box,
-    conic-gradient(
-        from var(--role-angle),
-        var(--role-color) 0deg,
-        transparent 70deg,
-        transparent 180deg,
-        var(--role-color) 250deg,
-        transparent 330deg
-      )
-      border-box;
-  animation:
-    role-spin 3.2s linear infinite,
-    role-glow 2.4s ease-in-out infinite;
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  border-color: color-mix(in srgb, var(--role-color) 45%, transparent);
+  background: hsl(var(--secondary));
+  animation: role-glow 2.4s ease-in-out infinite;
 }
+
+.role-flair::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  z-index: -2;
+  width: 240%;
+  aspect-ratio: 1;
+  translate: -50% -50%;
+  background: conic-gradient(
+    from 0deg,
+    var(--role-color) 0deg,
+    transparent 80deg,
+    transparent 170deg,
+    var(--role-color) 260deg,
+    transparent 340deg
+  );
+  animation: role-rotate 3.2s linear infinite;
+}
+
+.role-flair::after {
+  content: "";
+  position: absolute;
+  inset: 1px;
+  z-index: -1;
+  border-radius: inherit;
+  background: hsl(var(--secondary));
+}
+
 
 }
 

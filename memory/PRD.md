@@ -215,6 +215,10 @@ User choices: Discord linked by pasting user ID (no OAuth keys); Last.fm API key
 ## Implemented (2026-07, iteration 42)
 - All 7 role pills now wear the full flair treatment (previously only owner/premium/vip/moderator): rotating conic-gradient border in the role's color (role-spin) + a pulsing color glow (role-glow keyframes). Applies everywhere pills render — profiles, leaderboard, dashboard, and the +N hover tooltip.
 
+## Fixed (2026-07, iteration 43 — flair invisible)
+- Root cause: the Tailwind v4 CSS pipeline dropped the @property registration, so --role-angle was unregistered and the whole background shorthand went invalid → borderless pills. Rebuilt .role-flair without @property: spinning oversized conic-gradient pseudo (CSS `rotate` property) + 1px cover layer, faint static color-mix border as base, role-glow box-shadow. Verified via computed styles + two timed frames showing rotation.
+
+
 
 
 
