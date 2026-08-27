@@ -141,6 +141,10 @@ User choices: Discord linked by pasting user ID (no OAuth keys); Last.fm API key
 ## Implemented (2026-07, iteration 26)
 - Account cleanup at user request: deleted wren (UID #1) and hi2w (UID #2); renumbered tomo #3 → #1; granted Owner (OWNER_UIDS=1) + Developer (DEVELOPER_USERNAMES=tomo) roles. UID counter left at 4 so new signups continue at #5. humantest1 (#4) test account retained.
 
+
+## Implemented (2026-07, iteration 27)
+- Main test account: dntblink (UID #5, display name DNTBLINK) — designated testing page for all new features. Seeded with dark theme, bio, 3 demo links (GitHub/YouTube/Spotify), favorite track "Nikes Frank Ocean" (player + music video card verified live).
+
 - P1: Song progress bar on floating player; view milestones on dashboard
 - P2: Digest opt-out toggle; Cloudflare Turnstile on signup
 - P3: Custom domain support
