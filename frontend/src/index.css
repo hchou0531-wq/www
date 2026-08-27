@@ -194,20 +194,21 @@ html.lenis, html.lenis body {
 html,
 body {
   overflow-x: hidden;
+}
 
 @keyframes role-rotate {
   to {
-    rotate: 360deg;
+    transform: rotate(360deg);
   }
 }
 
 @keyframes role-glow {
   0%,
   100% {
-    box-shadow: 0 0 3px 0 color-mix(in srgb, var(--role-color) 35%, transparent);
+    box-shadow: 0 0 4px 0 color-mix(in srgb, var(--role-color) 45%, transparent);
   }
   50% {
-    box-shadow: 0 0 12px 2px color-mix(in srgb, var(--role-color) 60%, transparent);
+    box-shadow: 0 0 16px 3px color-mix(in srgb, var(--role-color) 75%, transparent);
   }
 }
 
@@ -215,9 +216,9 @@ body {
   position: relative;
   isolation: isolate;
   overflow: hidden;
-  border-color: color-mix(in srgb, var(--role-color) 45%, transparent);
+  border-color: color-mix(in srgb, var(--role-color) 55%, transparent);
   background: hsl(var(--secondary));
-  animation: role-glow 2.4s ease-in-out infinite;
+  animation: role-glow 1.8s ease-in-out infinite;
 }
 
 .role-flair::before {
@@ -228,16 +229,19 @@ body {
   z-index: -2;
   width: 240%;
   aspect-ratio: 1;
-  translate: -50% -50%;
+  margin-left: -120%;
+  margin-top: -120%;
   background: conic-gradient(
     from 0deg,
     var(--role-color) 0deg,
-    transparent 80deg,
-    transparent 170deg,
-    var(--role-color) 260deg,
+    var(--role-color) 45deg,
+    transparent 100deg,
+    transparent 175deg,
+    var(--role-color) 220deg,
+    var(--role-color) 265deg,
     transparent 340deg
   );
-  animation: role-rotate 3.2s linear infinite;
+  animation: role-rotate 2.2s linear infinite;
 }
 
 .role-flair::after {
@@ -248,7 +252,3 @@ body {
   border-radius: inherit;
   background: hsl(var(--secondary));
 }
-
-
-}
-
