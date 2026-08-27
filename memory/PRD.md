@@ -137,6 +137,10 @@ User choices: Discord linked by pasting user ID (no OAuth keys); Last.fm API key
 - Music Video Mode: GET /api/music-video?q= scrapes YouTube search ("{q} official music video"), validates candidates via oEmbed, caches 10 min. Profile shows MusicVideoCard (full width, thumbnail + purple play overlay → youtube-nocookie embed; NO autoplay=1 — it trips YouTube's bot wall). Known limit: top result may be a re-upload rather than the artist's official channel.
 - Cloudflare Turnstile on /register: widget (dark theme, action=signup) via challenges.cloudflare.com script; token required when REACT_APP_TURNSTILE_SITE_KEY set; backend verify_turnstile → siteverify, fails closed. Currently running Cloudflare's always-pass TEST keypair (1x000...AA) in both .env files — swap in real dashboard keys for production.
 
+
+## Implemented (2026-07, iteration 26)
+- Account cleanup at user request: deleted wren (UID #1) and hi2w (UID #2); renumbered tomo #3 → #1; granted Owner (OWNER_UIDS=1) + Developer (DEVELOPER_USERNAMES=tomo) roles. UID counter left at 4 so new signups continue at #5. humantest1 (#4) test account retained.
+
 - P1: Song progress bar on floating player; view milestones on dashboard
 - P2: Digest opt-out toggle; Cloudflare Turnstile on signup
 - P3: Custom domain support
