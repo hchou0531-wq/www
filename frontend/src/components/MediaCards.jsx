@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { Youtube, Twitch, ExternalLink } from "lucide-react";
+import { Youtube, Twitch, ExternalLink, Play } from "lucide-react";
 import { api } from "../lib/api";
 import { ease } from "./motion";
 
@@ -110,3 +110,64 @@ export function TwitchCard({ channel }) {
     </motion.div>
   );
 }
+
+export function MusicVideoCard({ query }) {
+  const [video, setVideo] = useState(null);
+  const [failed, setFailed] = useState(false);
+  const [playing, setPlaying] = useState(false);
+
+  useEffect(() => {
+    if (!query) return;
+    setVideo(null);
+    setFailed(false);
+    setPlaying(false);
+    api
+      .get("/music-video", { params: { q: query } })
+      .then((r) => setVideo(r.data))
+      .catch(() => setFailed(true));
+  }, [query]);
+
+  if (!query || failed) return null;
+
+  return (
+    <motion.div data-testid="music-video-card" initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, ease, delay: 0.18 }} className={cardCls}>
+      <div className="flex items-center justify-between px-5 pb-3 pt-4">
+        <span className={headCls}>
+          <Youtube size={13} /> the video
+        </span>
+        {video?.video_id && (
+          <a data-testid="music-video-link" href={`https://www.youtube.com/watch?v=${video.video_id}`} target="_blank" rel="noreferrer" className="text-muted-foreground transition-colors hover:text-foreground">
+            <ExternalLink size={14} />
+          </a>
+        )}
+      </div>
+      {video ? (
+        playing ? (
+          <div className="aspect-video w-full bg-black/20">
+            <iframe
+              data-testid="music-video-embed"
+              src={`https://www.youtube-nocookie.com/embed/${video.video_id}`}
+              className="h-full w-full border-0"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+              title="Music video"
+            />
+          </div>
+        ) : (
+          <button data-testid="music-video-play" onClick={() => setPlaying(true)} className="group relative block aspect-video w-full overflow-hidden bg-black/20">
+            <img src={`https://i.ytimg.com/vi/${video.video_id}/hqdefault.jpg`} alt="" className="h-full w-full object-cover opacity-80 transition-opacity duration-300 group-hover:opacity-100" />
+            <span className="absolute inset-0 flex items-center justify-center">
+              <span className="flex h-14 w-14 items-center justify-center rounded-full bg-[#8B5CF6] text-white shadow-[0_0_30px_rgba(139,92,246,0.5)] transition-transform duration-300 group-hover:scale-110">
+                <Play size={20} className="ml-0.5" />
+              </span>
+            </span>
+          </button>
+        )
+      ) : (
+        <div className="mx-5 mb-5 aspect-video animate-pulse rounded-2xl bg-secondary" />
+      )}
+      <p className="truncate px-5 py-3 text-xs text-muted-foreground">favorite song, on film — {query}</p>
+    </motion.div>
+  );
+}
+

@@ -1,10 +1,12 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Check, X, ArrowRight } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { api, errMsg } from "../lib/api";
 import { ease } from "../components/motion";
+
+const TURNSTILE_SITE_KEY = process.env.REACT_APP_TURNSTILE_SITE_KEY || "";
 
 export default function AuthPage({ mode }) {
   const isRegister = mode === "register";
@@ -20,6 +22,42 @@ export default function AuthPage({ mode }) {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [availability, setAvailability] = useState(null);
+  const [tsToken, setTsToken] = useState("");
+  const tsRef = useRef(null);
+  const tsWidget = useRef(null);
+
+  useEffect(() => {
+    if (!isRegister || !TURNSTILE_SITE_KEY) return;
+    const render = () => {
+      if (!tsRef.current || !window.turnstile || tsWidget.current !== null) return;
+      tsWidget.current = window.turnstile.render(tsRef.current, {
+        sitekey: TURNSTILE_SITE_KEY,
+        action: "signup",
+        theme: "dark",
+        callback: (t) => setTsToken(t),
+        "expired-callback": () => setTsToken(""),
+        "error-callback": () => setTsToken(""),
+      });
+    };
+    const existing = document.querySelector('script[src="https://challenges.cloudflare.com/turnstile/v0/api.js"]');
+    if (existing) {
+      if (window.turnstile) render();
+      else existing.addEventListener("load", render);
+    } else {
+      const s = document.createElement("script");
+      s.src = "https://challenges.cloudflare.com/turnstile/v0/api.js";
+      s.async = true;
+      s.defer = true;
+      s.addEventListener("load", render);
+      document.head.appendChild(s);
+    }
+    return () => {
+      if (tsWidget.current !== null && window.turnstile) {
+        window.turnstile.remove(tsWidget.current);
+        tsWidget.current = null;
+      }
+    };
+  }, [isRegister]);
 
   useEffect(() => {
     if (!isRegister || username.length < 3) {
@@ -43,7 +81,7 @@ export default function AuthPage({ mode }) {
     setBusy(true);
     try {
       if (isRegister) {
-        const user = await register(username, email, password, website);
+        const user = await register(username, email, password, website, tsToken);
         navigate("/settings", { state: { welcome: true, username: user.username } });
       } else {
         const user = await login(identifier, password);
@@ -51,6 +89,10 @@ export default function AuthPage({ mode }) {
       }
     } catch (err) {
       setError(errMsg(err, "Could not sign you in"));
+      if (isRegister && tsWidget.current !== null && window.turnstile) {
+        window.turnstile.reset(tsWidget.current);
+        setTsToken("");
+      }
     } finally {
       setBusy(false);
     }
@@ -140,12 +182,16 @@ export default function AuthPage({ mode }) {
               />
             )}
 
+            {isRegister && TURNSTILE_SITE_KEY && (
+              <div ref={tsRef} data-testid="turnstile-widget" aria-label="bot verification" className="flex justify-center" />
+            )}
+
             {error && <p data-testid="auth-error" className="text-sm text-destructive">{error}</p>}
 
             <button
               data-testid={isRegister ? "register-submit-btn" : "login-submit-btn"}
               type="submit"
-              disabled={busy || (isRegister && availability === false)}
+              disabled={busy || (isRegister && availability === false) || (isRegister && !!TURNSTILE_SITE_KEY && !tsToken)}
               className="group flex w-full items-center justify-center gap-2 rounded-xl bg-[#8B5CF6] py-3 text-sm font-medium text-white transition-colors hover:bg-[#7C4DEF] disabled:opacity-40"
             >
               {busy ? "one moment…" : isRegister ? "create my page" : "log in"}

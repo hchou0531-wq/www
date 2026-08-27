@@ -35,6 +35,7 @@ client = AsyncIOMotorClient(mongo_url)
 db = client[os.environ["DB_NAME"]]
 JWT_SECRET = os.environ["JWT_SECRET"]
 LASTFM_API_KEY = os.environ.get("LASTFM_API_KEY", "")
+TURNSTILE_SECRET_KEY = os.environ.get("TURNSTILE_SECRET_KEY", "")
 
 PyObjectId = Annotated[str, BeforeValidator(str)]
 
@@ -215,11 +216,29 @@ def has_premium(u: dict) -> bool:
     return bool(u.get("theme_pack")) or is_owner(u)
 
 
+async def verify_turnstile(token: str, request: Request):
+    if not TURNSTILE_SECRET_KEY:
+        return
+    if not token:
+        raise HTTPException(400, "please complete the verification checkbox")
+    try:
+        resp = await http.post(
+            "https://challenges.cloudflare.com/turnstile/v0/siteverify",
+            json={"secret": TURNSTILE_SECRET_KEY, "response": token, "remoteip": client_ip(request)},
+        )
+        result = resp.json()
+    except Exception:
+        raise HTTPException(503, "Verification service unavailable — try again")
+    if not result.get("success"):
+        raise HTTPException(400, "bot verification failed — refresh and try again")
+
+
 class RegisterBody(BaseModel):
     username: str
     email: str
     password: str
     website: str = ""
+    turnstile_token: str = ""
 
 
 class LoginBody(BaseModel):
@@ -253,6 +272,7 @@ async def register(body: RegisterBody, request: Request):
     if body.website:
         raise HTTPException(400, "signup rejected")
     rate_limit(f"reg:{client_ip(request)}", limit=5, window=3600)
+    await verify_turnstile(body.turnstile_token, request)
     username = body.username.strip().lower()
     email = body.email.strip().lower()
     if not USERNAME_RE.match(username):
@@ -745,6 +765,53 @@ async def digest_loop():
                     logger.info(f"Sent {n} weekly digests")
         except Exception as e:
             logger.error(f"Digest loop error: {e}")
+
+
+# ---------- Favorite-song music video (YouTube search) ----------
+
+_mv_cache = {}
+
+
+@api_router.get("/music-video")
+async def music_video(q: str):
+    q = q.strip()
+    if not q or len(q) > 120:
+        raise HTTPException(400, "Invalid query")
+    hit = _mv_cache.get(q)
+    if hit and time.time() - hit["at"] < 600:
+        return hit["data"]
+    try:
+        r = await http.get(
+            "https://www.youtube.com/results",
+            params={"search_query": f"{q} official music video"},
+            headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"},
+        )
+        candidates = []
+        for vid in re.findall(r'"videoRenderer":\{"videoId":"([\w-]{11})"', r.text):
+            if vid not in candidates:
+                candidates.append(vid)
+        if not candidates:
+            raise HTTPException(404, "No music video found")
+        data = None
+        for vid in candidates[:5]:
+            try:
+                oe = await http.get(
+                    "https://www.youtube.com/oembed",
+                    params={"url": f"https://www.youtube.com/watch?v={vid}", "format": "json"},
+                )
+                if oe.status_code == 200:
+                    data = {"video_id": vid, "query": q, "title": oe.json().get("title")}
+                    break
+            except Exception:
+                continue
+        if not data:
+            raise HTTPException(404, "No embeddable music video found")
+    except HTTPException:
+        raise
+    except Exception:
+        raise HTTPException(502, "YouTube search is unavailable right now")
+    _mv_cache[q] = {"at": time.time(), "data": data}
+    return data
 
 
 # ---------- YouTube & Twitch embeds (premium profile media) ----------

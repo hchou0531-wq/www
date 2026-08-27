@@ -9,7 +9,7 @@ import { DiscordCard } from "../components/DiscordCard";
 import { LastfmCard } from "../components/LastfmCard";
 import { SocialLinks } from "../components/SocialLinks";
 import { RolePills } from "../components/RolePills";
-import { YouTubeCard, TwitchCard } from "../components/MediaCards";
+import { YouTubeCard, TwitchCard, MusicVideoCard } from "../components/MediaCards";
 import { AutoPlayMusic } from "../components/AutoPlayMusic";
 
 export default function Profile() {
@@ -170,6 +170,7 @@ export default function Profile() {
           const hasLinks = profile.links.length > 0;
           const hasYt = !!profile.youtube_input;
           const hasTw = !!profile.twitch_channel;
+          const hasMv = !!profile.favorite_track;
           return (
             <div className="grid gap-5 lg:grid-cols-2">
               {profile.discord_id && (
@@ -197,7 +198,12 @@ export default function Profile() {
                   <TwitchCard channel={profile.twitch_channel} />
                 </div>
               )}
-              {!profile.discord_id && !showMusic && !hasLinks && !hasYt && !hasTw && (
+              {hasMv && (
+                <div className="lg:col-span-2">
+                  <MusicVideoCard query={profile.favorite_track} />
+                </div>
+              )}
+              {!profile.discord_id && !showMusic && !hasLinks && !hasYt && !hasTw && !hasMv && (
                 <p className="rounded-3xl border border-dashed border-border py-10 text-center text-sm text-muted-foreground lg:col-span-2">
                   a blank canvas — for now
                 </p>
