@@ -9,6 +9,7 @@ import re
 import time
 import uuid
 import secrets
+import hashlib
 import asyncio
 import ipaddress
 import logging
@@ -44,6 +45,16 @@ http = httpx.AsyncClient(timeout=8.0)
 
 app = FastAPI()
 api_router = APIRouter(prefix="/api")
+
+
+@app.middleware("http")
+async def security_headers(request: Request, call_next):
+    resp = await call_next(request)
+    resp.headers["X-Content-Type-Options"] = "nosniff"
+    resp.headers["X-Frame-Options"] = "SAMEORIGIN"
+    resp.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    resp.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
+    return resp
 
 logger = logging.getLogger(__name__)
 
@@ -303,10 +314,12 @@ async def register(body: RegisterBody, request: Request):
     if not USERNAME_RE.match(username):
         raise HTTPException(400, "Username must be 3-20 chars: letters, numbers, underscore")
     check_clean(username, "username")
-    if "@" not in email:
+    if "@" not in email or len(email) > 254:
         raise HTTPException(400, "Invalid email")
     if len(body.password) < 6:
         raise HTTPException(400, "Password must be at least 6 characters")
+    if len(body.password) > 128:
+        raise HTTPException(400, "Password must be under 128 characters")
     if username in RESERVED_USERNAMES or await db.users.find_one({"username": username}):
         raise HTTPException(409, "That username is taken")
     if await db.users.find_one({"email": email}):
@@ -336,6 +349,7 @@ async def register(body: RegisterBody, request: Request):
 @api_router.post("/auth/login")
 async def login(body: LoginBody, request: Request):
     rate_limit(f"login:{client_ip(request)}", limit=10, window=300)
+    rate_limit(f"loginacct:{body.identifier.strip().lower()[:64]}", limit=10, window=900)
     ident = body.identifier.strip().lower()
     user = await db.users.find_one({"$or": [{"email": ident}, {"username": ident}]})
     if not user or not verify_password(body.password, user["password_hash"]):
@@ -355,7 +369,7 @@ async def send_code_email(email: str, username: str, purpose: str = "verify"):
     await db.email_codes.delete_many({"email": email})
     await db.email_codes.insert_one({
         "email": email,
-        "code": code,
+        "code_hash": hashlib.sha256(code.encode()).hexdigest(),
         "expires_at": (datetime.now(timezone.utc) + timedelta(minutes=10)).isoformat(),
         "attempts": 0,
     })
@@ -394,7 +408,7 @@ async def verify_email(body: VerifyBody, user: dict = Depends(current_user)):
         raise HTTPException(400, "That code expired — hit resend for a fresh one")
     if doc.get("attempts", 0) >= 5:
         raise HTTPException(429, "Too many wrong tries — request a new code")
-    if doc["code"] != body.code.strip():
+    if doc["code_hash"] != hashlib.sha256(body.code.strip().encode()).hexdigest():
         await db.email_codes.update_one({"_id": doc["_id"]}, {"$inc": {"attempts": 1}})
         raise HTTPException(400, "Wrong code — check the email and try again")
     await db.users.update_one({"_id": user["_id"]}, {"$set": {"email_verified": True}})
@@ -460,6 +474,8 @@ async def reset_password(body: ResetBody, request: Request):
         raise HTTPException(400, "No account found with that email or username")
     if len(body.new_password) < 6:
         raise HTTPException(400, "Password must be at least 6 characters")
+    if len(body.new_password) > 128:
+        raise HTTPException(400, "Password must be under 128 characters")
     doc = await db.email_codes.find_one({"email": user["email"]})
     if not doc:
         raise HTTPException(400, "No reset code on file — request a new one")
@@ -467,7 +483,7 @@ async def reset_password(body: ResetBody, request: Request):
         raise HTTPException(400, "That code expired — request a new one")
     if doc.get("attempts", 0) >= 5:
         raise HTTPException(429, "Too many wrong tries — request a new code")
-    if doc["code"] != body.code.strip():
+    if doc["code_hash"] != hashlib.sha256(body.code.strip().encode()).hexdigest():
         await db.email_codes.update_one({"_id": doc["_id"]}, {"$inc": {"attempts": 1}})
         raise HTTPException(400, "Wrong code — check the email and try again")
     await db.users.update_one({"_id": user["_id"]}, {"$set": {"password_hash": hash_password(body.new_password), "email_verified": True}})
@@ -759,7 +775,8 @@ async def find_track(query: str):
 
 
 @api_router.get("/track/preview")
-async def track_preview(q: str):
+async def track_preview(q: str, request: Request):
+    rate_limit(f"itunes:{client_ip(request)}", limit=20, window=60)
     q = q.strip()
     if not q or len(q) > 120:
         raise HTTPException(400, "Invalid track query")
@@ -801,7 +818,8 @@ def normalize_track(t: dict) -> dict:
 
 
 @api_router.get("/lastfm/{username}/recent")
-async def lastfm_recent(username: str, limit: int = 10):
+async def lastfm_recent(username: str, request: Request, limit: int = 10):
+    rate_limit(f"lastfm:{client_ip(request)}", limit=30, window=60)
     username = username.strip()
     if not username or len(username) > 64:
         raise HTTPException(400, "Invalid Last.fm username")
@@ -1029,7 +1047,8 @@ _mv_cache = {}
 
 
 @api_router.get("/music-video")
-async def music_video(q: str):
+async def music_video(q: str, request: Request):
+    rate_limit(f"mvideo:{client_ip(request)}", limit=20, window=60)
     q = q.strip()
     if not q or len(q) > 120:
         raise HTTPException(400, "Invalid query")
@@ -1077,7 +1096,8 @@ _tw_cache = {}
 
 
 @api_router.get("/youtube/resolve")
-async def youtube_resolve(input: str):
+async def youtube_resolve(input: str, request: Request):
+    rate_limit(f"ytres:{client_ip(request)}", limit=20, window=60)
     raw = input.strip()
     if not raw or len(raw) > 200:
         raise HTTPException(400, "Invalid YouTube link")
@@ -1147,7 +1167,8 @@ async def top_clip(channel: str):
 
 
 @api_router.get("/twitch/{channel}")
-async def twitch_status(channel: str):
+async def twitch_status(channel: str, request: Request):
+    rate_limit(f"twitch:{client_ip(request)}", limit=30, window=60)
     channel = re.sub(r"[^a-zA-Z0-9_]", "", channel).lower()
     if not channel:
         raise HTTPException(400, "Invalid Twitch channel")
@@ -1176,7 +1197,8 @@ async def twitch_status(channel: str):
 _lanyard_cache = {}
 
 @api_router.get("/lanyard/{discord_id}")
-async def lanyard_lookup(discord_id: str):
+async def lanyard_lookup(discord_id: str, request: Request):
+    rate_limit(f"lanyard:{client_ip(request)}", limit=90, window=60)
     if not re.fullmatch(r"\d{15,22}", discord_id):
         raise HTTPException(400, "Invalid Discord ID")
     hit = _lanyard_cache.get(discord_id)
@@ -1214,7 +1236,8 @@ class ViewBody(BaseModel):
     referrer: str = ""
 
 @api_router.post("/profile/{username}/view")
-async def track_view(username: str, body: ViewBody):
+async def track_view(username: str, body: ViewBody, request: Request):
+    rate_limit(f"view:{client_ip(request)}", limit=60, window=60)
     username = username.strip().lower()
     if not await db.users.find_one({"username": username}):
         raise HTTPException(404, "Profile not found")
@@ -1224,7 +1247,7 @@ async def track_view(username: str, body: ViewBody):
     if body.referrer:
         try:
             from urllib.parse import urlparse
-            host = (urlparse(body.referrer).hostname or "").replace("www.", "")
+            host = (urlparse(body.referrer[:300]).hostname or "").replace("www.", "")
         except Exception:
             host = ""
     if host and "emergentagent.com" not in host and "emergent.sh" not in host:
@@ -1246,7 +1269,8 @@ class ClickBody(BaseModel):
     url: str
 
 @api_router.post("/profile/{username}/click")
-async def track_click(username: str, body: ClickBody):
+async def track_click(username: str, body: ClickBody, request: Request):
+    rate_limit(f"click:{client_ip(request)}", limit=60, window=60)
     res = await db.users.update_one(
         {"username": username.strip().lower(), "links.url": body.url},
         {"$inc": {"links.$.clicks": 1}},

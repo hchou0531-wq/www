@@ -194,6 +194,15 @@ User choices: Discord linked by pasting user ID (no OAuth keys); Last.fm API key
 - Admin user list: GET /api/admin/users (owner only) + scrollable "all pages" list in the Admin section — avatar, username, uid, views, verified check; clicking a row loads it into the lookup card and syncs the UID input. List refreshes after admin deletion (UIDs renumber live — dntblink moved #5→#4 when other accounts were deleted in the wild).
 
 
+## Hardened (2026-07, iteration 39 — security pass)
+- Security headers on every response: X-Content-Type-Options, X-Frame-Options SAMEORIGIN (admin iframe preview still works), Referrer-Policy, Permissions-Policy
+- Email codes now stored as SHA-256 hashes only (verification + reset); verified wrong-code reject + hashed-code accept + login with new password
+- Login brute force: per-account limit (10/15min) on top of per-IP (10/5min) — hammer test confirmed 429s
+- Rate limits added to all open proxies/trackers: Last.fm 30/min, iTunes preview 20/min, YouTube resolve 20/min, music-video 20/min, Twitch 30/min, Lanyard 90/min, view/click tracking 60/min — Last.fm hammer test confirmed 429 after 30
+- Input caps: password ≤128 chars (bcrypt truncation guard), email ≤254, referrer ≤300 chars
+- Confirmed already-solid: JWT 7-day expiry + HS256 pinned, bcrypt, upload type/size/ext validation, file serving gated by DB records (no traversal), forgot-password doesn't leak account existence, admin endpoints 403 for non-owners
+
+
 
 
 
