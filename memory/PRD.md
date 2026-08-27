@@ -176,6 +176,11 @@ User choices: Discord linked by pasting user ID (no OAuth keys); Last.fm API key
 - Verified badge: profiles with a confirmed email show a small "verified" check pill (public_user exposes `verified`).
 - Page deletion: Danger zone at the bottom of Customize — type your username to confirm. DELETE /auth/account removes the account, cleans codes/files, renumbers all higher UIDs down by one, and resets the UID counter (verified: codetest #7 deleted, uitest moved 8→7, counter back to 7).
 
+## Implemented (2026-07, iteration 35)
+- Deletion goodbye email: DELETE /auth/account emails a server-side "goodbye" confirmation before wiping the account (failure never blocks deletion). Verified live via uitest deletion — profile 404s, codes cleaned, counter correct.
+- Danger zone layout fix: removed negative margin, proper mt-6 spacing — no overlap with the live preview column; mobile stacks cleanly with zero overflow.
+
+
 
 
 - P1: Song progress bar on floating player; view milestones on dashboard

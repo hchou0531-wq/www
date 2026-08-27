@@ -450,6 +450,19 @@ async def delete_account(body: DeleteBody, user: dict = Depends(current_user)):
     if body.username.strip().lower() != user["username"]:
         raise HTTPException(400, "Type your username exactly to confirm")
     deleted_uid = user.get("uid")
+    try:
+        html = (
+            '<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>'
+            '<td style="background:#0d0714;padding:32px;font-family:Arial,sans-serif">'
+            '<p style="margin:0 0 8px;color:#A78BFA;font-size:11px;letter-spacing:2px;text-transform:uppercase">dontblink</p>'
+            f'<h1 style="margin:0 0 16px;color:#ffffff;font-size:22px">goodbye, @{escape(user["username"])}</h1>'
+            '<p style="margin:0 0 16px;color:#9f93b5;font-size:14px">your page has been deleted — account, links and stats are gone for good. if you change your mind, you can always claim a fresh page.</p>'
+            f'<p style="font-size:12px;color:#6b5f80">sent by {escape(EMAIL_FROM_NAME)} — we will never ask for your password by email.</p>'
+            '</td></tr></table>'
+        )
+        await send_email(to=user["email"], subject="your dontblink page is deleted", html=html)
+    except Exception:
+        pass
     if user.get("avatar_path"):
         await db.files.update_one({"storage_path": user["avatar_path"]}, {"$set": {"is_deleted": True}})
     if user.get("song_path"):

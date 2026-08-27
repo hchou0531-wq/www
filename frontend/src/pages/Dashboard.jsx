@@ -800,7 +800,7 @@ export default function Dashboard() {
             )}
 
             {tab === "customize" && (
-              <section data-testid="danger-zone" className="-mt-2 rounded-2xl border border-red-500/20 bg-red-500/5 p-5 sm:p-6">
+              <section data-testid="danger-zone" className="mt-6 rounded-2xl border border-red-500/20 bg-red-500/5 p-5 sm:p-6">
                 <h2 className="mb-1 font-display text-lg font-bold text-red-300">Danger zone</h2>
                 <p className="mb-4 text-xs text-white/40">Deleting your page removes your account, links and stats forever — and everyone behind you moves up a number.</p>
                 {!confirmDelete ? (
