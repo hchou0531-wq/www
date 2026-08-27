@@ -1,6 +1,6 @@
-import { Crown, Code2, Zap } from "lucide-react";
+import { Crown, Code2, Zap, Gem, Star, ShieldCheck, FlaskConical } from "lucide-react";
 
-const ICONS = { crown: Crown, code: Code2, zap: Zap };
+const ICONS = { crown: Crown, code: Code2, zap: Zap, gem: Gem, star: Star, shield: ShieldCheck, flask: FlaskConical };
 
 export function RolePills({ roles = [] }) {
   if (!roles.length) return null;

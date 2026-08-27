@@ -203,6 +203,11 @@ User choices: Discord linked by pasting user ID (no OAuth keys); Last.fm API key
 - Confirmed already-solid: JWT 7-day expiry + HS256 pinned, bcrypt, upload type/size/ext validation, file serving gated by DB records (no traversal), forgot-password doesn't leak account existence, admin endpoints 403 for non-owners
 
 
+## Implemented (2026-07, iteration 40)
+- General dashboard tab (below Overview): email card (current email, verified pill, change-email flow that sends a code to the new address with inline code verify) + password card (masked, current+new change form, "email me a reset code" fallback). New endpoints: POST /auth/change-password (current-pw check, rate limited), POST /auth/change-email (uniqueness check, sends verification code).
+- Admin role management: POST /api/admin/user/{uid}/roles {role, action} — owner can grant/revoke premium, vip, moderator, beta. Premium granted = sets theme_pack (full premium perks). user_roles now emits a Premium pill for anyone with theme_pack (so Stripe purchasers get the badge automatically) plus extra_roles. RolePills icons added (gem/star/shield/flask). Verified: grant/revoke round-trips, public profile shows Premium pill, non-owner 403.
+
+
 
 
 

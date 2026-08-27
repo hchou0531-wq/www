@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   LayoutGrid, Palette, Link2, Plug, Gem, Eye, Search, Copy, LogOut, ExternalLink,
   Share2, Plus, Trash2, ArrowUp, ArrowDown, ImagePlus, Lock, Check, MousePointerClick,
-  Sun, Moon, ChevronRight, ChevronDown, User, MessageSquare, AudioLines, Sparkles, Youtube, Twitch, ShieldCheck, BadgeCheck,
+  Sun, Moon, ChevronRight, ChevronDown, User, MessageSquare, AudioLines, Sparkles, Youtube, Twitch, ShieldCheck, BadgeCheck, Settings,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "../context/AuthContext";
@@ -52,6 +52,7 @@ const MILESTONES = [50, 100, 500, 1000];
 
 const TABS = [
   { id: "overview", label: "Overview", icon: LayoutGrid },
+  { id: "general", label: "General", icon: Settings },
   { id: "customize", label: "Customize", icon: Palette },
   { id: "links", label: "Links", icon: Link2 },
   { id: "connections", label: "Connections", icon: Plug },
@@ -104,6 +105,79 @@ export default function Dashboard() {
     setAdminPreview(false);
     setAdminConfirm(false);
     setAdminDeleteText("");
+  };
+
+  const adminSetRole = async (role, action) => {
+    if (!adminUser) return;
+    try {
+      const r = await api.post(`/admin/user/${adminUser.uid}/roles`, { role, action });
+      setAdminUser(r.data);
+      loadAdminList();
+      toast.success(`${role} ${action === "add" ? "granted" : "removed"}`);
+    } catch (e) {
+      toast.error(errMsg(e, "Role change failed"));
+    }
+  };
+
+  const [newEmail, setNewEmail] = useState("");
+  const [emailBusy, setEmailBusy] = useState(false);
+  const [emailCode, setEmailCode] = useState("");
+  const [curPw, setCurPw] = useState("");
+  const [newPw, setNewPw] = useState("");
+  const [pwBusy, setPwBusy] = useState(false);
+
+  const saveEmail = async () => {
+    if (!newEmail.trim() || emailBusy) return;
+    setEmailBusy(true);
+    try {
+      const r = await api.post("/auth/change-email", { email: newEmail });
+      setUser(r.data);
+      toast.success("code sent to your new email — verify it below");
+      setNewEmail("");
+    } catch (e) {
+      toast.error(errMsg(e, "Could not change email"));
+    } finally {
+      setEmailBusy(false);
+    }
+  };
+
+  const verifyNewEmail = async () => {
+    if (emailCode.length !== 6 || emailBusy) return;
+    setEmailBusy(true);
+    try {
+      const r = await api.post("/auth/verify-email", { code: emailCode });
+      setUser(r.data);
+      setEmailCode("");
+      toast.success("new email verified");
+    } catch (e) {
+      toast.error(errMsg(e, "Could not verify"));
+    } finally {
+      setEmailBusy(false);
+    }
+  };
+
+  const changePw = async () => {
+    if (!curPw || newPw.length < 6 || pwBusy) return;
+    setPwBusy(true);
+    try {
+      await api.post("/auth/change-password", { current_password: curPw, new_password: newPw });
+      setCurPw("");
+      setNewPw("");
+      toast.success("password changed");
+    } catch (e) {
+      toast.error(errMsg(e, "Could not change password"));
+    } finally {
+      setPwBusy(false);
+    }
+  };
+
+  const forgotPw = async () => {
+    try {
+      await api.post("/auth/forgot-password", { identifier: user.email });
+      toast.success("reset code sent to your email");
+    } catch (e) {
+      toast.error(errMsg(e, "Could not send the code"));
+    }
   };
 
   const adminLookup = async () => {
@@ -720,6 +794,63 @@ export default function Dashboard() {
               </div>
             )}
 
+            {tab === "general" && (
+              <div className="max-w-xl space-y-6">
+                <div>
+                  <h1 className="font-display text-xl font-bold sm:text-2xl">General</h1>
+                  <p className="mt-1 text-sm text-white/40">your account details — email and password</p>
+                </div>
+
+                <section data-testid="general-email-card" className="rounded-2xl border border-white/10 bg-[#1c1130]/60 p-5 sm:p-6">
+                  <div className="mb-3 flex items-center justify-between">
+                    <p className="text-xs font-medium uppercase tracking-[0.16em] text-white/40">email</p>
+                    {user.email_verified ? (
+                      <span data-testid="email-verified-pill" className="inline-flex items-center gap-1 rounded-full bg-[#8B5CF6]/15 px-2.5 py-1 text-[11px] text-[#C4B5FD]"><BadgeCheck size={11} /> verified</span>
+                    ) : (
+                      <span data-testid="email-unverified-pill" className="rounded-full bg-yellow-500/15 px-2.5 py-1 text-[11px] text-yellow-300">unverified</span>
+                    )}
+                  </div>
+                  <p data-testid="current-email" className="mb-4 text-sm">{user.email}</p>
+                  <label className={label}>change email</label>
+                  <div className="flex flex-col gap-2 sm:flex-row">
+                    <input data-testid="change-email-input" type="email" value={newEmail} onChange={(e) => setNewEmail(e.target.value)} placeholder="new email address" className={field} />
+                    <button data-testid="change-email-btn" onClick={saveEmail} disabled={!newEmail.trim() || emailBusy} className="shrink-0 rounded-xl bg-[#8B5CF6] px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[#7C4DEF] disabled:opacity-40">
+                      {emailBusy ? "sending…" : "save & send code"}
+                    </button>
+                  </div>
+                  {!user.email_verified && (
+                    <div className="mt-4 border-t border-white/10 pt-4">
+                      <p className="mb-2 text-xs text-white/40">enter the 6-digit code we sent to verify this email</p>
+                      <div className="flex flex-col gap-2 sm:flex-row">
+                        <input data-testid="general-verify-code-input" value={emailCode} onChange={(e) => setEmailCode(e.target.value.replace(/\D/g, "").slice(0, 6))} inputMode="numeric" placeholder="••••••" className={`${field} text-center font-mono tracking-[0.4em]`} />
+                        <button data-testid="general-verify-btn" onClick={verifyNewEmail} disabled={emailCode.length !== 6 || emailBusy} className="shrink-0 rounded-xl border border-[#8B5CF6]/40 px-4 py-2.5 text-sm text-[#C4B5FD] transition-colors hover:bg-[#8B5CF6]/10 disabled:opacity-40">
+                          verify
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </section>
+
+                <section data-testid="general-password-card" className="rounded-2xl border border-white/10 bg-[#1c1130]/60 p-5 sm:p-6">
+                  <p className="text-xs font-medium uppercase tracking-[0.16em] text-white/40">password</p>
+                  <p data-testid="password-masked" className="mb-1 mt-3 font-mono text-sm tracking-widest">••••••••••</p>
+                  <p className="mb-4 text-xs text-white/40">passwords are stored hashed — they can never be shown, only changed. forgotten yours? get a reset code by email.</p>
+                  <div className="space-y-3">
+                    <input data-testid="current-password-input" type="password" value={curPw} onChange={(e) => setCurPw(e.target.value)} placeholder="current password" className={field} />
+                    <input data-testid="new-password-input" type="password" value={newPw} onChange={(e) => setNewPw(e.target.value)} placeholder="new password (6+ chars)" className={field} />
+                    <div className="flex flex-wrap items-center gap-3">
+                      <button data-testid="change-password-btn" onClick={changePw} disabled={!curPw || newPw.length < 6 || pwBusy} className="rounded-xl bg-[#8B5CF6] px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[#7C4DEF] disabled:opacity-40">
+                        {pwBusy ? "changing…" : "change password"}
+                      </button>
+                      <button data-testid="forgot-password-btn" onClick={forgotPw} className="text-xs text-white/40 transition-colors hover:text-white">
+                        forgot it? email me a reset code
+                      </button>
+                    </div>
+                  </div>
+                </section>
+              </div>
+            )}
+
             {tab === "customize" && (
               <div className="grid gap-6 lg:grid-cols-[1.3fr_1fr]">
                 <div className="space-y-6">
@@ -1114,6 +1245,23 @@ export default function Dashboard() {
                             delete page
                           </button>
                         )}
+                      </div>
+                      <div className="flex flex-wrap items-center gap-2 border-t border-white/10 pt-3">
+                        <span className="text-[11px] uppercase tracking-[0.14em] text-white/40">roles</span>
+                        {["premium", "vip", "moderator", "beta"].map((role) => {
+                          const has = (adminUser.roles || []).some((r) => r.id === role);
+                          return (
+                            <button
+                              key={role}
+                              data-testid={`admin-role-${role}`}
+                              onClick={() => adminSetRole(role, has ? "remove" : "add")}
+                              title={has ? `remove ${role}` : `grant ${role}`}
+                              className={`rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${has ? "bg-[#8B5CF6]/25 text-[#C4B5FD]" : "bg-white/5 text-white/40 hover:bg-white/10 hover:text-white"}`}
+                            >
+                              {has ? "✓ " : "+ "}{role}
+                            </button>
+                          );
+                        })}
                       </div>
                       {adminPreview && (
                         <div data-testid="admin-preview-frame" className="overflow-hidden rounded-2xl border border-white/10">

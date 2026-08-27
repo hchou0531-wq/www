@@ -106,6 +106,10 @@ ROLE_DEFS = {
     "owner": {"id": "owner", "label": "Owner", "color": "#8B5CF6", "icon": "crown"},
     "developer": {"id": "developer", "label": "Developer", "color": "#60A5FA", "icon": "code"},
     "v1": {"id": "v1", "label": "V1", "color": "#F5C518", "icon": "zap"},
+    "premium": {"id": "premium", "label": "Premium", "color": "#EAB308", "icon": "gem"},
+    "vip": {"id": "vip", "label": "VIP", "color": "#F472B6", "icon": "star"},
+    "moderator": {"id": "moderator", "label": "Moderator", "color": "#34D399", "icon": "shield"},
+    "beta": {"id": "beta", "label": "Beta", "color": "#38BDF8", "icon": "flask"},
 }
 OWNER_SET = {x.strip().lower() for x in os.environ.get("OWNER_USERNAMES", "").split(",") if x.strip()}
 OWNER_UIDS = {int(x) for x in os.environ.get("OWNER_UIDS", "2").split(",") if x.strip()}
@@ -124,8 +128,13 @@ def user_roles(u: dict) -> list:
         out.append(ROLE_DEFS["owner"])
     if uname in DEV_SET:
         out.append(ROLE_DEFS["developer"])
+    if has_premium(u):
+        out.append(ROLE_DEFS["premium"])
     if (u.get("created_at") or "") < V1_CUTOFF:
         out.append(ROLE_DEFS["v1"])
+    for r in u.get("extra_roles", []):
+        if r in ROLE_DEFS and all(x["id"] != r for x in out):
+            out.append(ROLE_DEFS[r])
     return out
 
 
@@ -440,6 +449,47 @@ async def resend_code(user: dict = Depends(current_user)):
     return {"ok": True}
 
 
+class ChangePasswordBody(BaseModel):
+    current_password: str
+    new_password: str
+
+
+@api_router.post("/auth/change-password")
+async def change_password(body: ChangePasswordBody, user: dict = Depends(current_user)):
+    rate_limit(f"chpass:{user['_id']}", limit=5, window=600)
+    if not verify_password(body.current_password, user["password_hash"]):
+        raise HTTPException(400, "Current password is wrong")
+    if len(body.new_password) < 6:
+        raise HTTPException(400, "Password must be at least 6 characters")
+    if len(body.new_password) > 128:
+        raise HTTPException(400, "Password must be under 128 characters")
+    await db.users.update_one({"_id": user["_id"]}, {"$set": {"password_hash": hash_password(body.new_password)}})
+    return {"ok": True}
+
+
+class ChangeEmailBody(BaseModel):
+    email: str
+
+
+@api_router.post("/auth/change-email")
+async def change_email(body: ChangeEmailBody, user: dict = Depends(current_user)):
+    rate_limit(f"chemail:{user['_id']}", limit=5, window=600)
+    email = body.email.strip().lower()
+    if "@" not in email or len(email) > 254:
+        raise HTTPException(400, "Invalid email")
+    if email == user["email"]:
+        raise HTTPException(400, "That's already your email")
+    if await db.users.find_one({"email": email, "_id": {"$ne": user["_id"]}}):
+        raise HTTPException(409, "That email is taken")
+    await db.users.update_one({"_id": user["_id"]}, {"$set": {"email": email, "email_verified": False}})
+    try:
+        await send_code_email(email, user["username"])
+    except Exception:
+        raise HTTPException(502, "Could not send the code right now — try again in a minute")
+    fresh = await db.users.find_one({"_id": user["_id"]})
+    return public_user(fresh, owner=True)
+
+
 # ---------- Password reset (code by email) ----------
 
 class ForgotBody(BaseModel):
@@ -536,6 +586,14 @@ async def wipe_user(user: dict):
 
 # ---------- Admin (owner only) ----------
 
+def admin_view(t: dict) -> dict:
+    data = public_user(t)
+    data["email"] = t["email"]
+    data["verified"] = bool(t.get("email_verified"))
+    data["created_at"] = t.get("created_at")
+    return data
+
+
 @api_router.get("/admin/user/{uid}")
 async def admin_lookup(uid: int, user: dict = Depends(current_user)):
     if not is_owner(user):
@@ -543,11 +601,7 @@ async def admin_lookup(uid: int, user: dict = Depends(current_user)):
     target = await db.users.find_one({"uid": uid})
     if not target:
         raise HTTPException(404, "No page with that number")
-    data = public_user(target)
-    data["email"] = target["email"]
-    data["verified"] = bool(target.get("email_verified"))
-    data["created_at"] = target.get("created_at")
-    return data
+    return admin_view(target)
 
 
 @api_router.delete("/admin/user/{uid}")
@@ -570,13 +624,41 @@ async def admin_users(user: dict = Depends(current_user)):
     if not is_owner(user):
         raise HTTPException(403, "Owner only")
     users = await db.users.find({}).sort("uid", 1).to_list(500)
-    out = []
-    for t in users:
-        data = public_user(t)
-        data["email"] = t["email"]
-        data["verified"] = bool(t.get("email_verified"))
-        out.append(data)
-    return out
+    return [admin_view(t) for t in users]
+
+
+ADMIN_ASSIGNABLE_ROLES = {"vip", "moderator", "beta", "premium"}
+
+
+class AdminRoleBody(BaseModel):
+    role: str
+    action: str
+
+
+@api_router.post("/admin/user/{uid}/roles")
+async def admin_set_role(uid: int, body: AdminRoleBody, user: dict = Depends(current_user)):
+    if not is_owner(user):
+        raise HTTPException(403, "Owner only")
+    if body.role not in ADMIN_ASSIGNABLE_ROLES:
+        raise HTTPException(400, "Unknown role")
+    if body.action not in ("add", "remove"):
+        raise HTTPException(400, "Action must be add or remove")
+    target = await db.users.find_one({"uid": uid})
+    if not target:
+        raise HTTPException(404, "No page with that number")
+    if body.role == "premium":
+        if body.action == "add":
+            await db.users.update_one(
+                {"_id": target["_id"]},
+                {"$set": {"theme_pack": {"granted_by": user["username"], "granted_at": datetime.now(timezone.utc).isoformat()}}},
+            )
+        else:
+            await db.users.update_one({"_id": target["_id"]}, {"$set": {"theme_pack": None}})
+    else:
+        op = "$addToSet" if body.action == "add" else "$pull"
+        await db.users.update_one({"_id": target["_id"]}, {op: {"extra_roles": body.role}})
+    fresh = await db.users.find_one({"_id": target["_id"]})
+    return admin_view(fresh)
 
 
 @api_router.put("/auth/profile")
