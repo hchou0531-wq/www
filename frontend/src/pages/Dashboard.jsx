@@ -340,7 +340,7 @@ export default function Dashboard() {
         <span className="text-xs text-white/50">{title}</span>
         <Icon size={16} className="text-[#A78BFA]" />
       </div>
-      <p className="font-display text-2xl font-bold text-white">{value}</p>
+      <p className="font-display text-xl font-bold sm:text-2xl text-white">{value}</p>
       <p className="mt-1 text-xs text-white/40">{sub}</p>
     </div>
   );
@@ -402,8 +402,8 @@ export default function Dashboard() {
         </div>
       </aside>
 
-      <div className="flex min-h-screen flex-1 flex-col md:pl-64">
-        <div className="sticky top-0 z-30 flex items-center gap-2 overflow-x-auto border-b border-white/10 bg-[#0d0714]/90 px-4 py-3 backdrop-blur md:hidden">
+      <div className="flex min-h-screen min-w-0 flex-1 flex-col md:pl-64">
+        <div data-testid="dashboard-mobile-tabs" className="sticky top-0 z-30 flex items-center gap-2 overflow-x-auto border-b border-white/10 bg-[#0d0714]/90 px-4 py-3 backdrop-blur [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:hidden">
           <Link to="/" className="mr-2 font-display font-bold">dontblink</Link>
           {TABS.map((t) => (
             <button key={t.id} data-testid={`dash-tab-mobile-${t.id}`} onClick={() => setTab(t.id)} className={`shrink-0 rounded-full px-3.5 py-1.5 text-xs ${tab === t.id ? "bg-[#8B5CF6]/25 text-[#C4B5FD]" : "text-white/50"}`}>
@@ -416,9 +416,9 @@ export default function Dashboard() {
           <motion.div key={tab} initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, ease }}>
             {tab === "overview" && (
               <div className="space-y-6">
-                <h1 className="font-display text-2xl font-bold">Account overview</h1>
+                <h1 className="font-display text-xl font-bold sm:text-2xl">Account overview</h1>
                 {user.roles?.length > 0 && (
-                  <div className="-mt-3 flex items-center gap-2">
+                  <div className="-mt-3 flex flex-wrap items-center gap-2">
                     <span className="text-xs text-white/40">your roles</span>
                     <RolePills roles={user.roles} />
                   </div>
@@ -431,7 +431,7 @@ export default function Dashboard() {
                 </div>
 
                 <div className="grid gap-4 lg:grid-cols-[1.6fr_1fr]">
-                  <div className="rounded-2xl border border-white/10 bg-[#1c1130]/60 p-6">
+                  <div className="rounded-2xl border border-white/10 bg-[#1c1130]/60 p-5 sm:p-6">
                     <div className="mb-4 flex items-center justify-between">
                       <h2 className="font-display text-lg font-bold">Profile completion</h2>
                       <span data-testid="completion-pct" className="text-xs text-white/40">{pct}% complete</span>
@@ -456,7 +456,7 @@ export default function Dashboard() {
                   </div>
 
                   <div className="space-y-4">
-                    <div className="rounded-2xl border border-white/10 bg-[#1c1130]/60 p-6">
+                    <div className="rounded-2xl border border-white/10 bg-[#1c1130]/60 p-5 sm:p-6">
                       <h2 className="mb-4 font-display text-lg font-bold">Quick actions</h2>
                       <div className="space-y-2">
                         {[
@@ -477,7 +477,7 @@ export default function Dashboard() {
                   </div>
                 </div>
 
-                <div className="rounded-2xl border border-white/10 bg-[#1c1130]/60 p-6">
+                <div className="rounded-2xl border border-white/10 bg-[#1c1130]/60 p-5 sm:p-6">
                   <div className="mb-4 flex items-baseline justify-between">
                     <h2 className="font-display text-lg font-bold">Account analytics</h2>
                     <span className="text-[10px] uppercase tracking-[0.16em] text-white/30">last 14 days</span>
@@ -572,8 +572,8 @@ export default function Dashboard() {
             {tab === "customize" && (
               <div className="grid gap-6 lg:grid-cols-[1.3fr_1fr]">
                 <div className="space-y-6">
-                  <h1 className="font-display text-2xl font-bold">Customize</h1>
-                  <section className="rounded-2xl border border-white/10 bg-[#1c1130]/60 p-6">
+                  <h1 className="font-display text-xl font-bold sm:text-2xl">Customize</h1>
+                  <section className="rounded-2xl border border-white/10 bg-[#1c1130]/60 p-5 sm:p-6">
                     <h2 className="mb-1 font-display text-lg font-bold">Username</h2>
                     <p className="mb-4 text-xs text-white/40">This moves your whole page — dontblink.site/<span className="text-[#A78BFA]">you</span></p>
                     <div className="flex gap-2">
@@ -612,7 +612,7 @@ export default function Dashboard() {
                     )}
                     {unameStatus === "invalid" && <p data-testid="username-invalid-msg" className="mt-2 text-xs text-red-400">3-20 chars: letters, numbers, underscore</p>}
                   </section>
-                  <section className="rounded-2xl border border-white/10 bg-[#1c1130]/60 p-6">
+                  <section className="rounded-2xl border border-white/10 bg-[#1c1130]/60 p-5 sm:p-6">
                     <h2 className="mb-5 font-display text-lg font-bold">Profile</h2>
                     <div className="mb-5 flex items-center gap-4">
                       <div data-testid="settings-avatar-preview" className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#8B5CF6]/20 font-display text-xl font-bold text-[#A78BFA]">
@@ -640,7 +640,7 @@ export default function Dashboard() {
                     <textarea id="bio-input" data-testid="bio-input" value={bio} onChange={(e) => setBio(e.target.value)} maxLength={300} rows={3} placeholder="a line or two about you" className={`${field} resize-none`} />
                   </section>
 
-                  <section className="rounded-2xl border border-white/10 bg-[#1c1130]/60 p-6">
+                  <section className="rounded-2xl border border-white/10 bg-[#1c1130]/60 p-5 sm:p-6">
                     <div className="mb-1 flex items-center justify-between gap-2">
                       <h2 className="font-display text-lg font-bold">Page theme</h2>
                       <div data-testid="mode-toggle" className="flex items-center gap-1 rounded-full border border-white/15 bg-white/5 p-1">
@@ -719,8 +719,8 @@ export default function Dashboard() {
 
             {tab === "links" && (
               <div className="max-w-2xl space-y-6">
-                <h1 className="font-display text-2xl font-bold">Links</h1>
-                <section className="rounded-2xl border border-white/10 bg-[#1c1130]/60 p-6">
+                <h1 className="font-display text-xl font-bold sm:text-2xl">Links</h1>
+                <section className="rounded-2xl border border-white/10 bg-[#1c1130]/60 p-5 sm:p-6">
                   <h2 className="mb-1 font-display text-lg font-bold">Social links</h2>
                   <p className="mb-5 text-xs text-white/40">Paste a link — its icon is found automatically. Tap counts update live.</p>
                   <div className="mb-4 flex gap-2">
@@ -763,8 +763,8 @@ export default function Dashboard() {
 
             {tab === "connections" && (
               <div className="max-w-2xl space-y-6">
-                <h1 className="font-display text-2xl font-bold">Connections</h1>
-                <section className="rounded-2xl border border-white/10 bg-[#1c1130]/60 p-6">
+                <h1 className="font-display text-xl font-bold sm:text-2xl">Connections</h1>
+                <section className="rounded-2xl border border-white/10 bg-[#1c1130]/60 p-5 sm:p-6">
                   <div className="mb-1 flex items-center gap-2">
                     <MessageSquare size={16} className="text-[#A78BFA]" />
                     <h2 className="font-display text-lg font-bold">Discord</h2>
@@ -787,7 +787,7 @@ export default function Dashboard() {
                   )}
                 </section>
 
-                <section className="rounded-2xl border border-white/10 bg-[#1c1130]/60 p-6">
+                <section className="rounded-2xl border border-white/10 bg-[#1c1130]/60 p-5 sm:p-6">
                   <div className="mb-1 flex items-center gap-2">
                     <AudioLines size={16} className="text-[#A78BFA]" />
                     <h2 className="font-display text-lg font-bold">Last.fm</h2>
@@ -843,7 +843,7 @@ export default function Dashboard() {
                   )}
                 </section>
 
-                <section className="relative rounded-2xl border border-white/10 bg-[#1c1130]/60 p-6">
+                <section className="relative rounded-2xl border border-white/10 bg-[#1c1130]/60 p-5 sm:p-6">
                   <div className="mb-1 flex items-center gap-2">
                     <Youtube size={16} className="text-[#A78BFA]" />
                     <h2 className="font-display text-lg font-bold">YouTube</h2>
@@ -865,7 +865,7 @@ export default function Dashboard() {
                   )}
                 </section>
 
-                <section className="relative rounded-2xl border border-white/10 bg-[#1c1130]/60 p-6">
+                <section className="relative rounded-2xl border border-white/10 bg-[#1c1130]/60 p-5 sm:p-6">
                   <div className="mb-1 flex items-center gap-2">
                     <Twitch size={16} className="text-[#A78BFA]" />
                     <h2 className="font-display text-lg font-bold">Twitch</h2>
@@ -892,12 +892,12 @@ export default function Dashboard() {
 
             {tab === "premium" && (
               <div className="max-w-2xl space-y-6">
-                <h1 className="font-display text-2xl font-bold">Premium</h1>
+                <h1 className="font-display text-xl font-bold sm:text-2xl">Premium</h1>
                 {user.theme_pack ? (
                   <div data-testid="premium-owned" className="relative overflow-hidden rounded-2xl border border-[#8B5CF6]/50 bg-[#8B5CF6]/10 p-8 text-center shadow-[0_0_60px_rgba(139,92,246,0.2)]">
                     <div className="pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full bg-[#8B5CF6]/30 blur-[70px]" />
                     <Gem size={28} className="mx-auto mb-3 text-[#A78BFA]" />
-                    <p className="font-display text-2xl font-bold">You're premium, forever</p>
+                    <p className="font-display text-xl font-bold sm:text-2xl">You're premium, forever</p>
                     <p className="mt-2 text-sm text-white/50">Every theme — Moss, Ember, Dusk, and all future ones — is yours. Thank you for keeping dontblink alive.</p>
                   </div>
                 ) : (

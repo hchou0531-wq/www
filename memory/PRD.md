@@ -154,6 +154,10 @@ User choices: Discord linked by pasting user ID (no OAuth keys); Last.fm API key
 - Mobile dropdown nav: shared MobileMenu component (hamburger → animated glass dropdown, outside-click close, auto-close on route change, light/dark variants). Wired into the dark Nav (LandingDark, shared by all InfoPages) and the light Landing nav. Desktop nav hidden below sm breakpoint; verified at 390px including menu navigation.
 
 
+## Implemented (2026-07, iteration 30)
+- Dashboard mobile cleanup: fixed page-level horizontal overflow (min-w-0 on content column), hidden scrollbar on the mobile tab strip, tighter card padding on mobile (p-5 sm:p-6 across all sections), responsive headings (text-xl → sm:text-2xl), wrapping roles row. Verified at 390px: scrollWidth == viewport on Overview + Customize.
+
+
 - P1: Song progress bar on floating player; view milestones on dashboard
 - P2: Digest opt-out toggle; Cloudflare Turnstile on signup
 - P3: Custom domain support
