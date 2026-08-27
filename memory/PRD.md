@@ -180,6 +180,12 @@ User choices: Discord linked by pasting user ID (no OAuth keys); Last.fm API key
 - Deletion goodbye email: DELETE /auth/account emails a server-side "goodbye" confirmation before wiping the account (failure never blocks deletion). Verified live via uitest deletion — profile 404s, codes cleaned, counter correct.
 - Danger zone layout fix: removed negative margin, proper mt-6 spacing — no overlap with the live preview column; mobile stacks cleanly with zero overflow.
 
+## Fixed (2026-07, iteration 36 — email outage)
+- Root cause: EMERGENT_EMAIL_KEY held the LLM key (sk-emergent-…); the email proxy needs the dedicated per-app email key (ek_18e7c39cdb9f90a8f6b90741470f84b4). All sends were 401ing, and register/deletion swallowed the failure silently.
+- After key swap: verification code, welcome email, password reset code and weekly digest all send cleanly (verified via register→verify flow and digest-test, zero email errors in logs).
+- Welcome email: fires once on first successful verify-email, links to the user's new page.
+
+
 
 
 

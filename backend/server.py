@@ -376,6 +376,20 @@ async def verify_email(body: VerifyBody, user: dict = Depends(current_user)):
         raise HTTPException(400, "Wrong code — check the email and try again")
     await db.users.update_one({"_id": user["_id"]}, {"$set": {"email_verified": True}})
     await db.email_codes.delete_many({"email": user["email"]})
+    try:
+        html = (
+            '<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>'
+            '<td style="background:#0d0714;padding:32px;font-family:Arial,sans-serif">'
+            '<p style="margin:0 0 8px;color:#A78BFA;font-size:11px;letter-spacing:2px;text-transform:uppercase">dontblink</p>'
+            f'<h1 style="margin:0 0 16px;color:#ffffff;font-size:22px">you\'re in, @{escape(user["username"])}</h1>'
+            '<p style="margin:0 0 16px;color:#9f93b5;font-size:14px">email verified — your corner of the internet is live. add your links, connect your Discord and Last.fm, and make it yours.</p>'
+            f'<p style="margin:0 0 16px"><a href="{escape(APP_URL)}/{escape(user["username"])}" style="color:#A78BFA">see your page</a></p>'
+            f'<p style="font-size:12px;color:#6b5f80">sent by {escape(EMAIL_FROM_NAME)} — we will never ask for your password by email.</p>'
+            '</td></tr></table>'
+        )
+        await send_email(to=user["email"], subject=f"welcome to dontblink, @{user['username']}", html=html)
+    except Exception:
+        pass
     fresh = await db.users.find_one({"_id": user["_id"]})
     return public_user(fresh, owner=True)
 
