@@ -145,6 +145,11 @@ User choices: Discord linked by pasting user ID (no OAuth keys); Last.fm API key
 ## Implemented (2026-07, iteration 27)
 - Main test account: dntblink (UID #5, display name DNTBLINK) — designated testing page for all new features. Seeded with dark theme, bio, 3 demo links (GitHub/YouTube/Spotify), favorite track "Nikes Frank Ocean" (player + music video card verified live).
 
+
+## Implemented (2026-07, iteration 28)
+- Music player progress bar v2: seekable purple bar with elapsed/total timestamps (tabular-nums), hover grow + dot handle, click-to-seek verified. Replaces the thin edge line.
+- dntblink Discord presence: set discord_id=94490510688792576 (public Lanyard demo user "Phineas", MOCKED) — card shows banner, avatar, status pill, Spotify vinyl state. Swap in a real Discord ID for real presence.
+
 - P1: Song progress bar on floating player; view milestones on dashboard
 - P2: Digest opt-out toggle; Cloudflare Turnstile on signup
 - P3: Custom domain support
