@@ -109,14 +109,15 @@ export default function Profile() {
     ? `${process.env.REACT_APP_BACKEND_URL}${profile.avatar_url}`
     : discord.data?.avatar_url;
   const isOwn = user?.username === profile.username;
+  const hasPlayer = !!(profile.favorite_track || profile.song_url);
 
   return (
-    <div data-testid="profile-page" data-theme={resolvedTheme} className="min-h-screen bg-background text-foreground transition-colors duration-500">
+    <div data-testid="profile-page" data-theme={resolvedTheme} className="min-h-screen overflow-x-hidden bg-background text-foreground transition-colors duration-500">
       <motion.main
         initial={{ opacity: 0, y: 24 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.7, ease }}
-        className="mx-auto max-w-3xl px-4 py-14 sm:py-20"
+        className={`mx-auto max-w-3xl px-4 py-14 sm:py-20 ${hasPlayer ? "pb-36" : ""}`}
       >
         <header className="mb-10 text-center">
           <motion.div
@@ -172,7 +173,7 @@ export default function Profile() {
           const hasTw = !!profile.twitch_channel;
           const hasMv = !!profile.favorite_track;
           return (
-            <div className="grid gap-5 lg:grid-cols-2">
+            <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
               {profile.discord_id && (
                 <div className="lg:col-span-2">
                   <DiscordCard data={discord.data} loading={discord.loading} error={discord.error} onRetry={() => loadDiscord(profile.discord_id)} presence={presence} />

@@ -82,11 +82,11 @@ export function AutoPlayMusic({ query, songUrl }) {
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, ease, delay: 0.4 }}
-        className="fixed bottom-5 right-5 z-50 overflow-hidden rounded-2xl border border-border bg-card/90 shadow-[0_12px_40px_rgba(0,0,0,0.25)] backdrop-blur-xl"
+        className="fixed bottom-4 right-4 z-50 max-w-[calc(100vw-2rem)] overflow-hidden rounded-2xl border border-border bg-card/90 shadow-[0_12px_40px_rgba(0,0,0,0.25)] backdrop-blur-xl sm:bottom-5 sm:right-5"
       >
         <div className="flex items-center gap-3 px-3.5 pt-2.5">
           {track.image_url && <img src={track.image_url} alt="" className="h-9 w-9 rounded-lg object-cover" />}
-          <div className="max-w-[130px] min-w-0">
+          <div className="min-w-0 max-w-[110px] sm:max-w-[130px]">
             <p data-testid="music-player-name" className="truncate text-xs font-medium">{track.name}</p>
             <p className="truncate text-[10px] text-muted-foreground">{track.artist}</p>
           </div>
@@ -98,7 +98,7 @@ export function AutoPlayMusic({ query, songUrl }) {
           >
             {playing ? <Pause size={13} /> : <Play size={13} className="ml-0.5" />}
           </button>
-          <div className="flex items-center gap-1.5">
+          <div className="hidden items-center gap-1.5 sm:flex">
             <Volume2 size={13} className="shrink-0 text-muted-foreground" />
             <input
               data-testid="music-volume"
@@ -119,7 +119,7 @@ export function AutoPlayMusic({ query, songUrl }) {
             data-testid="music-seek-bar"
             onClick={seek}
             title="click to seek"
-            className="group relative h-3 w-40 cursor-pointer"
+            className="group relative h-3 w-28 cursor-pointer sm:w-40"
           >
             <div className="absolute inset-x-0 top-1/2 h-[3px] -translate-y-1/2 rounded-full bg-white/10 transition-[height] duration-200 group-hover:h-[5px]" />
             <div data-testid="music-progress" className="absolute left-0 top-1/2 h-[3px] -translate-y-1/2 rounded-full bg-[#8B5CF6] transition-[height] duration-200 group-hover:h-[5px]" style={{ width: `${Math.min(progress, 1) * 100}%` }} />
@@ -133,7 +133,7 @@ export function AutoPlayMusic({ query, songUrl }) {
           data-testid="music-tap-hint"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          className="fixed bottom-[76px] right-5 z-50 rounded-full bg-card/90 px-3 py-1.5 text-[11px] text-muted-foreground shadow backdrop-blur-xl"
+          className="fixed bottom-[104px] right-4 z-50 rounded-full bg-card/90 px-3 py-1.5 text-[11px] text-muted-foreground shadow backdrop-blur-xl sm:bottom-[96px] sm:right-5"
         >
           tap to hear their favorite song
         </motion.p>

@@ -162,6 +162,12 @@ User choices: Discord linked by pasting user ID (no OAuth keys); Last.fm API key
 - Dashboard mobile tab strip → dropdown menu: sticky mobile bar now shows brand + a pill button with the current section and chevron; opens an animated glass dropdown listing all 5 sections with a check on the active one. Outside-click closes, selection closes + switches tab. Verified at 390px on dntblink: no overflow, tab switching works.
 
 
+## Fixed (2026-07, iteration 32 — mobile glitches)
+- Root cause of small-screen glitches: profile card grid used an implicit auto column at mobile, so the widest card's min-content forced every card to ~413px on 375px screens (clipped timestamps, cut cards). Fix: explicit grid-cols-1 (minmax(0,1fr)).
+- Music player mobile: max-w-[calc(100vw-2rem)], volume slider hidden below sm, narrower seek bar, tap hint repositioned; profile page gets bottom clearance (pb-36) when player is present.
+- Global overflow-x guard on html/body. Verified at 375px: grid 343px, 0 overflowing elements, no page overflow on /, /leaderboard, /pricing, /compare, /login, /register, /tomo, /dntblink.
+
+
 - P1: Song progress bar on floating player; view milestones on dashboard
 - P2: Digest opt-out toggle; Cloudflare Turnstile on signup
 - P3: Custom domain support

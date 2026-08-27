@@ -190,3 +190,9 @@ html.lenis, html.lenis body {
     --tint-lastfm: 340 25% 17%;
     --tint-sage: 146 14% 16%;
 }
+
+html,
+body {
+  overflow-x: hidden;
+}
+
