@@ -1,21 +1,15 @@
 import { Crown, Code2, Zap, Gem, Star, ShieldCheck, FlaskConical } from "lucide-react";
 
 const ICONS = { crown: Crown, code: Code2, zap: Zap, gem: Gem, star: Star, shield: ShieldCheck, flask: FlaskConical };
-const FLAIR = new Set(["owner", "premium", "vip", "moderator"]);
 
 function Pill({ role, pad, iconSize }) {
   const Icon = ICONS[role.icon] || Star;
-  const flair = FLAIR.has(role.id);
   return (
     <span
       data-testid={`role-pill-${role.id}`}
       title={role.label}
-      className={`inline-flex items-center gap-1 rounded-full border font-medium ${pad} ${flair ? "role-flair" : ""}`}
-      style={
-        flair
-          ? { color: role.color, "--role-color": role.color }
-          : { color: role.color, backgroundColor: role.color + "18", borderColor: role.color + "40" }
-      }
+      className={`role-flair inline-flex items-center gap-1 rounded-full border font-medium ${pad}`}
+      style={{ color: role.color, "--role-color": role.color }}
     >
       <Icon size={iconSize} />
       {role.label}

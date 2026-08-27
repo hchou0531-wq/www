@@ -212,6 +212,10 @@ User choices: Discord linked by pasting user ID (no OAuth keys); Last.fm API key
 - Role loadout system: PUT /api/auth/roles/equip (max 4, must own each role). Roles now ordered by importance (owner > developer > premium > moderator > vip > beta > v1). General tab has a "role loadout" card listing ALL 7 roles — owned ones equippable, unowned locked with "how to get" text (e.g. premium = "gotten through purchasing premium").
 - Profile/leaderboard badges: show equipped roles (or top 4 by importance if none picked), rest behind a +N pill with hover tooltip listing them. Owner/Premium/VIP/Moderator pills get an animated conic-gradient border (role-flair CSS, role-spin keyframes). dntblink owns 5 roles as a showcase; equipped: premium+vip+moderator.
 
+## Implemented (2026-07, iteration 42)
+- All 7 role pills now wear the full flair treatment (previously only owner/premium/vip/moderator): rotating conic-gradient border in the role's color (role-spin) + a pulsing color glow (role-glow keyframes). Applies everywhere pills render — profiles, leaderboard, dashboard, and the +N hover tooltip.
+
+
 
 
 

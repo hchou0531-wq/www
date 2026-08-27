@@ -207,6 +207,16 @@ body {
   }
 }
 
+@keyframes role-glow {
+  0%,
+  100% {
+    box-shadow: 0 0 3px 0 color-mix(in srgb, var(--role-color) 35%, transparent);
+  }
+  50% {
+    box-shadow: 0 0 12px 2px color-mix(in srgb, var(--role-color) 60%, transparent);
+  }
+}
+
 .role-flair {
   border-color: transparent;
   background:
@@ -220,7 +230,9 @@ body {
         transparent 330deg
       )
       border-box;
-  animation: role-spin 3.2s linear infinite;
+  animation:
+    role-spin 3.2s linear infinite,
+    role-glow 2.4s ease-in-out infinite;
 }
 
 }
