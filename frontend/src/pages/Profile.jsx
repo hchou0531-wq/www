@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Crown } from "lucide-react";
+import { Crown, BadgeCheck } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { api, errMsg } from "../lib/api";
 import { ease } from "../components/motion";
@@ -146,6 +146,11 @@ export default function Profile() {
               </span>
             )}
             <RolePills roles={profile.roles || []} />
+            {profile.verified && (
+              <span data-testid="verified-badge" title="email verified" className="inline-flex items-center gap-1 rounded-full border border-border bg-secondary px-2.5 py-1 text-[11px] text-muted-foreground">
+                <BadgeCheck size={11} className="text-[#8B5CF6]" /> verified
+              </span>
+            )}
           </div>
           {welcomeBack && (
             <motion.p

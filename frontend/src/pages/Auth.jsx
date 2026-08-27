@@ -172,6 +172,13 @@ export default function AuthPage({ mode }) {
               minLength={isRegister ? 6 : 1}
               className="w-full rounded-xl border border-input bg-secondary px-4 py-3 text-sm outline-none transition-colors focus:border-[#8B5CF6]"
             />
+            {!isRegister && (
+              <div className="text-right">
+                <Link data-testid="forgot-password-link" to="/reset" className="text-xs text-muted-foreground transition-colors hover:text-foreground">
+                  forgot password?
+                </Link>
+              </div>
+            )}
             {isRegister && (
               <input
                 type="text"

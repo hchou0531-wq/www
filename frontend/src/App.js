@@ -7,6 +7,7 @@ import Landing from "@/pages/LandingDark";
 import { ComparePage, LeaderboardPage, PricingPage } from "@/pages/InfoPages";
 import AuthPage from "@/pages/Auth";
 import Verify from "@/pages/Verify";
+import Reset from "@/pages/Reset";
 import Settings from "@/pages/Dashboard";
 import Profile from "@/pages/Profile";
 
@@ -71,6 +72,7 @@ function AppInner() {
         <Route path="/login" element={<AuthPage mode="login" />} />
         <Route path="/register" element={<AuthPage mode="register" />} />
         <Route path="/verify" element={<Verify />} />
+        <Route path="/reset" element={<Reset />} />
         <Route path="/compare" element={<ComparePage />} />
         <Route path="/leaderboard" element={<LeaderboardPage />} />
         <Route path="/pricing" element={<PricingPage />} />

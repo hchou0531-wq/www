@@ -153,6 +153,7 @@ def public_user(u: dict, owner: bool = False) -> dict:
             {"date": (today - timedelta(days=i)).isoformat(), "count": by_day.get((today - timedelta(days=i)).isoformat(), 0)}
             for i in range(13, -1, -1)
         ]
+    data["verified"] = bool(u.get("email_verified"))
     return data
 
 
@@ -303,7 +304,7 @@ async def register(body: RegisterBody, request: Request):
     res = await db.users.insert_one(doc)
     doc["_id"] = res.inserted_id
     try:
-        await send_verification_code(email, username)
+        await send_code_email(email, username)
     except Exception:
         pass
     return {"token": make_token(str(res.inserted_id)), "user": public_user(doc, owner=True)}
@@ -326,7 +327,7 @@ async def me(user: dict = Depends(current_user)):
 
 # ---------- Email verification ----------
 
-async def send_verification_code(email: str, username: str):
+async def send_code_email(email: str, username: str, purpose: str = "verify"):
     code = "".join(secrets.choice("0123456789") for _ in range(6))
     await db.email_codes.delete_many({"email": email})
     await db.email_codes.insert_one({
@@ -335,14 +336,20 @@ async def send_verification_code(email: str, username: str):
         "expires_at": (datetime.now(timezone.utc) + timedelta(minutes=10)).isoformat(),
         "attempts": 0,
     })
+    if purpose == "reset":
+        heading = "reset your password"
+        blurb = "here is your password reset code — it expires in 10 minutes:"
+    else:
+        heading = f"welcome, @{escape(username)}"
+        blurb = "here is your verification code — it expires in 10 minutes:"
     html = (
         '<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>'
         '<td style="background:#0d0714;padding:32px;font-family:Arial,sans-serif">'
         '<p style="margin:0 0 8px;color:#A78BFA;font-size:11px;letter-spacing:2px;text-transform:uppercase">dontblink</p>'
-        f'<h1 style="margin:0 0 16px;color:#ffffff;font-size:22px">welcome, @{escape(username)}</h1>'
-        '<p style="margin:0 0 16px;color:#9f93b5;font-size:14px">here is your verification code — it expires in 10 minutes:</p>'
+        f'<h1 style="margin:0 0 16px;color:#ffffff;font-size:22px">{heading}</h1>'
+        f'<p style="margin:0 0 16px;color:#9f93b5;font-size:14px">{blurb}</p>'
         f'<p style="margin:0 0 24px;font-size:34px;font-weight:bold;letter-spacing:8px;color:#ffffff">{code}</p>'
-        f'<p style="font-size:12px;color:#6b5f80">sent by {escape(EMAIL_FROM_NAME)} — if you did not sign up, just ignore this email. we will never ask for your password by email.</p>'
+        f'<p style="font-size:12px;color:#6b5f80">sent by {escape(EMAIL_FROM_NAME)} — if you did not ask for this, just ignore this email. we will never ask for your password by email.</p>'
         '</td></tr></table>'
     )
     await send_email(to=email, subject=f"{code} is your dontblink code", html=html)
@@ -378,7 +385,81 @@ async def resend_code(user: dict = Depends(current_user)):
     if user.get("email_verified"):
         return {"ok": True, "already_verified": True}
     rate_limit(f"resend:{user['_id']}", limit=3, window=600)
-    await send_verification_code(user["email"], user["username"])
+    await send_code_email(user["email"], user["username"])
+    return {"ok": True}
+
+
+# ---------- Password reset (code by email) ----------
+
+class ForgotBody(BaseModel):
+    identifier: str
+
+
+@api_router.post("/auth/forgot-password")
+async def forgot_password(body: ForgotBody, request: Request):
+    rate_limit(f"forgot:{client_ip(request)}", limit=5, window=600)
+    ident = body.identifier.strip().lower()
+    user = await db.users.find_one({"$or": [{"email": ident}, {"username": ident}]})
+    if user:
+        try:
+            await send_code_email(user["email"], user["username"], purpose="reset")
+        except Exception:
+            raise HTTPException(502, "Could not send the email right now — try again in a minute")
+    return {"ok": True}
+
+
+class ResetBody(BaseModel):
+    identifier: str
+    code: str
+    new_password: str
+
+
+@api_router.post("/auth/reset-password")
+async def reset_password(body: ResetBody, request: Request):
+    rate_limit(f"reset:{client_ip(request)}", limit=10, window=600)
+    ident = body.identifier.strip().lower()
+    user = await db.users.find_one({"$or": [{"email": ident}, {"username": ident}]})
+    if not user:
+        raise HTTPException(400, "No account found with that email or username")
+    if len(body.new_password) < 6:
+        raise HTTPException(400, "Password must be at least 6 characters")
+    doc = await db.email_codes.find_one({"email": user["email"]})
+    if not doc:
+        raise HTTPException(400, "No reset code on file — request a new one")
+    if datetime.now(timezone.utc) > datetime.fromisoformat(doc["expires_at"]):
+        raise HTTPException(400, "That code expired — request a new one")
+    if doc.get("attempts", 0) >= 5:
+        raise HTTPException(429, "Too many wrong tries — request a new code")
+    if doc["code"] != body.code.strip():
+        await db.email_codes.update_one({"_id": doc["_id"]}, {"$inc": {"attempts": 1}})
+        raise HTTPException(400, "Wrong code — check the email and try again")
+    await db.users.update_one({"_id": user["_id"]}, {"$set": {"password_hash": hash_password(body.new_password), "email_verified": True}})
+    await db.email_codes.delete_many({"email": user["email"]})
+    fresh = await db.users.find_one({"_id": user["_id"]})
+    return {"token": make_token(str(user["_id"])), "user": public_user(fresh, owner=True)}
+
+
+# ---------- Account deletion (renumbers UIDs) ----------
+
+class DeleteBody(BaseModel):
+    username: str
+
+
+@api_router.delete("/auth/account")
+async def delete_account(body: DeleteBody, user: dict = Depends(current_user)):
+    if body.username.strip().lower() != user["username"]:
+        raise HTTPException(400, "Type your username exactly to confirm")
+    deleted_uid = user.get("uid")
+    if user.get("avatar_path"):
+        await db.files.update_one({"storage_path": user["avatar_path"]}, {"$set": {"is_deleted": True}})
+    if user.get("song_path"):
+        await db.files.update_one({"storage_path": user["song_path"]}, {"$set": {"is_deleted": True}})
+    await db.email_codes.delete_many({"email": user["email"]})
+    await db.users.delete_one({"_id": user["_id"]})
+    if deleted_uid:
+        await db.users.update_many({"uid": {"$gt": deleted_uid}}, {"$inc": {"uid": -1}})
+        top = await db.users.find_one({}, sort=[("uid", -1)])
+        await db.counters.update_one({"_id": "uid"}, {"$set": {"seq": top["uid"] if top else 0}}, upsert=True)
     return {"ok": True}
 
 

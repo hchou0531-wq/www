@@ -151,6 +151,24 @@ export default function Dashboard() {
     }
   };
 
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState("");
+  const [deleting, setDeleting] = useState(false);
+
+  const deletePage = async () => {
+    if (deleteConfirm !== user.username || deleting) return;
+    setDeleting(true);
+    try {
+      await api.delete("/auth/account", { data: { username: deleteConfirm } });
+      toast.success("page deleted — everyone behind you moved up a number");
+      logout();
+      navigate("/");
+    } catch (e) {
+      toast.error(errMsg(e, "Could not delete the page"));
+      setDeleting(false);
+    }
+  };
+
   useEffect(() => {
     const name = newUsername.trim().toLowerCase();
     if (!name || name === user.username) {
@@ -779,6 +797,31 @@ export default function Dashboard() {
                   </div>
                 </div>
               </div>
+            )}
+
+            {tab === "customize" && (
+              <section data-testid="danger-zone" className="-mt-2 rounded-2xl border border-red-500/20 bg-red-500/5 p-5 sm:p-6">
+                <h2 className="mb-1 font-display text-lg font-bold text-red-300">Danger zone</h2>
+                <p className="mb-4 text-xs text-white/40">Deleting your page removes your account, links and stats forever — and everyone behind you moves up a number.</p>
+                {!confirmDelete ? (
+                  <button data-testid="delete-page-btn" onClick={() => setConfirmDelete(true)} className="rounded-xl border border-red-500/30 px-4 py-2 text-sm text-red-300 transition-colors hover:bg-red-500/10">
+                    delete my page
+                  </button>
+                ) : (
+                  <div className="space-y-3">
+                    <p className="text-xs text-red-200/80">type <span className="font-mono font-medium text-red-200">{user.username}</span> to confirm</p>
+                    <div className="flex flex-col gap-2 sm:flex-row">
+                      <input data-testid="delete-confirm-input" value={deleteConfirm} onChange={(e) => setDeleteConfirm(e.target.value)} placeholder={user.username} className={`${field} font-mono`} />
+                      <button data-testid="delete-confirm-btn" onClick={deletePage} disabled={deleteConfirm !== user.username || deleting} className="shrink-0 rounded-xl bg-red-500 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-red-600 disabled:opacity-40">
+                        {deleting ? "deleting…" : "delete forever"}
+                      </button>
+                    </div>
+                    <button data-testid="delete-cancel-btn" onClick={() => { setConfirmDelete(false); setDeleteConfirm(""); }} className="text-xs text-white/40 transition-colors hover:text-white">
+                      cancel
+                    </button>
+                  </div>
+                )}
+              </section>
             )}
 
             {tab === "links" && (

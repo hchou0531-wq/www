@@ -171,6 +171,12 @@ User choices: Discord linked by pasting user ID (no OAuth keys); Last.fm API key
 - Email verification on signup: 6-digit code emailed via managed Resend (EMAIL_FROM_NAME=dontblink), 10-min expiry, 5-attempt cap, rate-limited verify (10/10min) and resend (3/10min). New users start email_verified=false; register → /verify page; unverified logins redirect to /verify. Existing 4 users grandfathered as verified. Codes stored in email_codes collection, single-use (deleted on success). E2E verified via UI: register → verify page → code entry → dashboard; wrong codes rejected.
 
 
+## Implemented (2026-07, iteration 34)
+- Password reset: /reset page (identifier → emailed 6-digit code → new password → auto-login). POST /auth/forgot-password (no account-existence leak) + /auth/reset-password; reuses the code system (10-min expiry, 5 attempts, rate limits). "forgot password?" link on the login form. Resetting also marks the email verified.
+- Verified badge: profiles with a confirmed email show a small "verified" check pill (public_user exposes `verified`).
+- Page deletion: Danger zone at the bottom of Customize — type your username to confirm. DELETE /auth/account removes the account, cleans codes/files, renumbers all higher UIDs down by one, and resets the UID counter (verified: codetest #7 deleted, uitest moved 8→7, counter back to 7).
+
+
 
 - P1: Song progress bar on floating player; view milestones on dashboard
 - P2: Digest opt-out toggle; Cloudflare Turnstile on signup
