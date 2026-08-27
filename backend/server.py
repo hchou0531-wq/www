@@ -130,11 +130,11 @@ def user_roles(u: dict) -> list:
         out.append(ROLE_DEFS["developer"])
     if has_premium(u):
         out.append(ROLE_DEFS["premium"])
+    for r in ("moderator", "vip", "beta"):
+        if r in (u.get("extra_roles") or []):
+            out.append(ROLE_DEFS[r])
     if (u.get("created_at") or "") < V1_CUTOFF:
         out.append(ROLE_DEFS["v1"])
-    for r in u.get("extra_roles", []):
-        if r in ROLE_DEFS and all(x["id"] != r for x in out):
-            out.append(ROLE_DEFS[r])
     return out
 
 
@@ -151,6 +151,7 @@ def public_user(u: dict, owner: bool = False) -> dict:
         "theme": u.get("theme", "light"),
         "theme_auto": u.get("theme_auto", False),
         "roles": user_roles(u),
+        "equipped_roles": u.get("equipped_roles", []),
         "uid": u.get("uid"),
         "youtube_input": u.get("youtube_input"),
         "twitch_channel": u.get("twitch_channel"),
@@ -635,6 +636,28 @@ class AdminRoleBody(BaseModel):
     action: str
 
 
+class EquipBody(BaseModel):
+    roles: list = []
+
+
+@api_router.put("/auth/roles/equip")
+async def equip_roles(body: EquipBody, user: dict = Depends(current_user)):
+    owned = {r["id"] for r in user_roles(user)}
+    wanted = []
+    for r in body.roles:
+        if r not in ROLE_DEFS:
+            continue
+        if r not in owned:
+            raise HTTPException(400, f"You don't own the {r} role")
+        if r not in wanted:
+            wanted.append(r)
+    if len(wanted) > 4:
+        raise HTTPException(400, "You can equip at most 4 roles")
+    await db.users.update_one({"_id": user["_id"]}, {"$set": {"equipped_roles": wanted}})
+    fresh = await db.users.find_one({"_id": user["_id"]})
+    return public_user(fresh, owner=True)
+
+
 @api_router.post("/admin/user/{uid}/roles")
 async def admin_set_role(uid: int, body: AdminRoleBody, user: dict = Depends(current_user)):
     if not is_owner(user):
@@ -776,6 +799,7 @@ async def leaderboard():
             "views": u.get("views", 0),
             "avatar_url": f"/api/files/{u['avatar_path']}" if u.get("avatar_path") else None,
             "roles": user_roles(u),
+            "equipped_roles": u.get("equipped_roles", []),
         })
     return {"leaders": leaders}
 

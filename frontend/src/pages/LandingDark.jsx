@@ -403,7 +403,7 @@ export function Leaderboard() {
                   <div className="min-w-0 flex-1">
                     <div className="flex min-w-0 items-center gap-2">
                       <p className="truncate text-sm font-semibold text-white">{l.display_name}</p>
-                      <RolePills roles={l.roles} />
+                      <RolePills roles={l.roles} equipped={l.equipped_roles} />
                     </div>
                     <p className="truncate text-xs text-white/40">@{l.username}</p>
                   </div>

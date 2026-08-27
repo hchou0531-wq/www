@@ -1,26 +1,56 @@
 import { Crown, Code2, Zap, Gem, Star, ShieldCheck, FlaskConical } from "lucide-react";
 
 const ICONS = { crown: Crown, code: Code2, zap: Zap, gem: Gem, star: Star, shield: ShieldCheck, flask: FlaskConical };
+const FLAIR = new Set(["owner", "premium", "vip", "moderator"]);
 
-export function RolePills({ roles = [] }) {
-  if (!roles.length) return null;
+function Pill({ role, pad, iconSize }) {
+  const Icon = ICONS[role.icon] || Star;
+  const flair = FLAIR.has(role.id);
   return (
-    <span data-testid="role-pills" className="inline-flex flex-wrap items-center gap-1.5">
-      {roles.map((r) => {
-        const Icon = ICONS[r.icon] || Zap;
-        return (
-          <span
-            key={r.id}
-            data-testid={`role-pill-${r.id}`}
-            className="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-medium"
-            style={{ borderColor: `${r.color}44`, backgroundColor: `${r.color}14`, color: r.color }}
-          >
-            <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: r.color }} />
-            {r.label}
-            <Icon size={11} />
+    <span
+      data-testid={`role-pill-${role.id}`}
+      title={role.label}
+      className={`inline-flex items-center gap-1 rounded-full border font-medium ${pad} ${flair ? "role-flair" : ""}`}
+      style={
+        flair
+          ? { color: role.color, "--role-color": role.color }
+          : { color: role.color, backgroundColor: role.color + "18", borderColor: role.color + "40" }
+      }
+    >
+      <Icon size={iconSize} />
+      {role.label}
+    </span>
+  );
+}
+
+export function RolePills({ roles, size = "sm", equipped = null }) {
+  if (!roles?.length) return null;
+  const active = Array.isArray(equipped) && equipped.length ? roles.filter((r) => equipped.includes(r.id)) : roles;
+  const shown = active.slice(0, 4);
+  const shownIds = new Set(shown.map((r) => r.id));
+  const rest = roles.filter((r) => !shownIds.has(r.id));
+  const pad = size === "md" ? "px-2.5 py-1 text-xs" : "px-2 py-0.5 text-[11px]";
+  const iconSize = size === "md" ? 12 : 10;
+  return (
+    <span className="inline-flex flex-wrap items-center justify-center gap-1">
+      {shown.map((r) => (
+        <Pill key={r.id} role={r} pad={pad} iconSize={iconSize} />
+      ))}
+      {rest.length > 0 && (
+        <span className="group relative inline-flex">
+          <span data-testid="roles-more" className={`inline-flex cursor-default items-center rounded-full border border-border bg-secondary font-medium text-muted-foreground ${pad}`}>
+            +{rest.length}
           </span>
-        );
-      })}
+          <span
+            data-testid="roles-more-tooltip"
+            className="pointer-events-none absolute left-1/2 top-full z-30 mt-2 flex w-max max-w-[240px] -translate-x-1/2 flex-wrap items-center justify-center gap-1 rounded-xl border border-border bg-popover p-2 opacity-0 shadow-xl transition-opacity duration-200 group-hover:opacity-100"
+          >
+            {rest.map((r) => (
+              <Pill key={r.id} role={r} pad="px-2 py-0.5 text-[11px]" iconSize={10} />
+            ))}
+          </span>
+        </span>
+      )}
     </span>
   );
 }

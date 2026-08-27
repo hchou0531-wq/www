@@ -208,6 +208,11 @@ User choices: Discord linked by pasting user ID (no OAuth keys); Last.fm API key
 - Admin role management: POST /api/admin/user/{uid}/roles {role, action} — owner can grant/revoke premium, vip, moderator, beta. Premium granted = sets theme_pack (full premium perks). user_roles now emits a Premium pill for anyone with theme_pack (so Stripe purchasers get the badge automatically) plus extra_roles. RolePills icons added (gem/star/shield/flask). Verified: grant/revoke round-trips, public profile shows Premium pill, non-owner 403.
 
 
+## Implemented (2026-07, iteration 41)
+- Role loadout system: PUT /api/auth/roles/equip (max 4, must own each role). Roles now ordered by importance (owner > developer > premium > moderator > vip > beta > v1). General tab has a "role loadout" card listing ALL 7 roles — owned ones equippable, unowned locked with "how to get" text (e.g. premium = "gotten through purchasing premium").
+- Profile/leaderboard badges: show equipped roles (or top 4 by importance if none picked), rest behind a +N pill with hover tooltip listing them. Owner/Premium/VIP/Moderator pills get an animated conic-gradient border (role-flair CSS, role-spin keyframes). dntblink owns 5 roles as a showcase; equipped: premium+vip+moderator.
+
+
 
 
 

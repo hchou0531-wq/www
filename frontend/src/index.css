@@ -194,5 +194,34 @@ html.lenis, html.lenis body {
 html,
 body {
   overflow-x: hidden;
+
+@property --role-angle {
+  syntax: "<angle>";
+  initial-value: 0deg;
+  inherits: false;
+}
+
+@keyframes role-spin {
+  to {
+    --role-angle: 360deg;
+  }
+}
+
+.role-flair {
+  border-color: transparent;
+  background:
+    linear-gradient(hsl(var(--secondary)), hsl(var(--secondary))) padding-box,
+    conic-gradient(
+        from var(--role-angle),
+        var(--role-color) 0deg,
+        transparent 70deg,
+        transparent 180deg,
+        var(--role-color) 250deg,
+        transparent 330deg
+      )
+      border-box;
+  animation: role-spin 3.2s linear infinite;
+}
+
 }
 

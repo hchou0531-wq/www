@@ -145,7 +145,7 @@ export default function Profile() {
                 <Crown size={11} /> most viewed
               </span>
             )}
-            <RolePills roles={profile.roles || []} />
+            <RolePills roles={profile.roles || []} equipped={profile.equipped_roles} />
             {profile.verified && (
               <span data-testid="verified-badge" title="email verified" className="inline-flex items-center gap-1 rounded-full border border-border bg-secondary px-2.5 py-1 text-[11px] text-muted-foreground">
                 <BadgeCheck size={11} className="text-[#8B5CF6]" /> verified

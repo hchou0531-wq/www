@@ -50,6 +50,16 @@ function ThemePreview({ id, locked }) {
 
 const MILESTONES = [50, 100, 500, 1000];
 
+const ROLE_CATALOG = [
+  { id: "owner", label: "Owner", how: "belongs to the owner of dontblink" },
+  { id: "developer", label: "Developer", how: "given to the developers who build dontblink" },
+  { id: "premium", label: "Premium", how: "gotten through purchasing premium" },
+  { id: "moderator", label: "Moderator", how: "granted by the owner to trusted members" },
+  { id: "vip", label: "VIP", how: "granted by the owner to special members" },
+  { id: "beta", label: "Beta", how: "granted by the owner to beta testers" },
+  { id: "v1", label: "V1", how: "joined while dontblink was V1" },
+];
+
 const TABS = [
   { id: "overview", label: "Overview", icon: LayoutGrid },
   { id: "general", label: "General", icon: Settings },
@@ -177,6 +187,27 @@ export default function Dashboard() {
       toast.success("reset code sent to your email");
     } catch (e) {
       toast.error(errMsg(e, "Could not send the code"));
+    }
+  };
+
+  const [equippedRoles, setEquippedRoles] = useState(user.equipped_roles || []);
+
+  const toggleEquip = async (id) => {
+    const owned = new Set((user.roles || []).map((r) => r.id));
+    if (!owned.has(id)) return;
+    const next = equippedRoles.includes(id) ? equippedRoles.filter((r) => r !== id) : [...equippedRoles, id];
+    if (next.length > 4) {
+      toast.error("you can equip at most 4 roles");
+      return;
+    }
+    const prev = equippedRoles;
+    setEquippedRoles(next);
+    try {
+      const r = await api.put("/auth/roles/equip", { roles: next });
+      setUser(r.data);
+    } catch (e) {
+      setEquippedRoles(prev);
+      toast.error(errMsg(e, "Could not save"));
     }
   };
 
@@ -645,7 +676,7 @@ export default function Dashboard() {
                 {user.roles?.length > 0 && (
                   <div className="-mt-3 flex flex-wrap items-center gap-2">
                     <span className="text-xs text-white/40">your roles</span>
-                    <RolePills roles={user.roles} />
+                    <RolePills roles={user.roles} equipped={user.equipped_roles} />
                   </div>
                 )}
                 <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
@@ -846,6 +877,40 @@ export default function Dashboard() {
                         forgot it? email me a reset code
                       </button>
                     </div>
+                  </div>
+                </section>
+
+                <section data-testid="role-loadout-card" className="rounded-2xl border border-white/10 bg-[#1c1130]/60 p-5 sm:p-6">
+                  <div className="mb-1 flex items-center justify-between">
+                    <p className="text-xs font-medium uppercase tracking-[0.16em] text-white/40">role loadout</p>
+                    <span data-testid="loadout-count" className="text-[11px] text-white/40">{equippedRoles.length}/4 equipped</span>
+                  </div>
+                  <p className="mb-4 text-xs text-white/40">tap a role you own to equip it — up to 4 show on your page, the rest tuck behind a +N pill. pick nothing and your top 4 show by importance.</p>
+                  <div className="space-y-2">
+                    {ROLE_CATALOG.map((role) => {
+                      const owned = (user.roles || []).some((r) => r.id === role.id);
+                      const on = equippedRoles.includes(role.id);
+                      return (
+                        <button
+                          key={role.id}
+                          data-testid={`loadout-role-${role.id}`}
+                          onClick={() => toggleEquip(role.id)}
+                          disabled={!owned}
+                          className={`flex w-full items-center gap-3 rounded-xl border px-3.5 py-2.5 text-left transition-colors ${!owned ? "cursor-not-allowed border-white/5 bg-white/[0.02] opacity-50" : on ? "border-[#8B5CF6]/50 bg-[#8B5CF6]/15" : "border-white/10 bg-white/5 hover:border-white/20"}`}
+                        >
+                          <span className="min-w-0 flex-1">
+                            <span className="flex items-center gap-2 text-sm font-medium">
+                              {role.label}
+                              {!owned && <Lock size={12} className="text-white/30" />}
+                              {owned && on && <Check size={13} className="text-[#A78BFA]" />}
+                            </span>
+                            <span className="block truncate text-[11px] text-white/40">
+                              {owned ? (on ? "equipped — showing on your page" : "owned — tap to equip") : role.how}
+                            </span>
+                          </span>
+                        </button>
+                      );
+                    })}
                   </div>
                 </section>
               </div>
