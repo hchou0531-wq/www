@@ -158,6 +158,10 @@ User choices: Discord linked by pasting user ID (no OAuth keys); Last.fm API key
 - Dashboard mobile cleanup: fixed page-level horizontal overflow (min-w-0 on content column), hidden scrollbar on the mobile tab strip, tighter card padding on mobile (p-5 sm:p-6 across all sections), responsive headings (text-xl → sm:text-2xl), wrapping roles row. Verified at 390px: scrollWidth == viewport on Overview + Customize.
 
 
+## Implemented (2026-07, iteration 31)
+- Dashboard mobile tab strip → dropdown menu: sticky mobile bar now shows brand + a pill button with the current section and chevron; opens an animated glass dropdown listing all 5 sections with a check on the active one. Outside-click closes, selection closes + switches tab. Verified at 390px on dntblink: no overflow, tab switching works.
+
+
 - P1: Song progress bar on floating player; view milestones on dashboard
 - P2: Digest opt-out toggle; Cloudflare Turnstile on signup
 - P3: Custom domain support

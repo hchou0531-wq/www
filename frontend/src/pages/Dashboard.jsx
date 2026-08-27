@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   LayoutGrid, Palette, Link2, Plug, Gem, Eye, Search, Copy, LogOut, ExternalLink,
   Share2, Plus, Trash2, ArrowUp, ArrowDown, ImagePlus, Lock, Check, MousePointerClick,
-  Sun, Moon, ChevronRight, User, MessageSquare, AudioLines, Sparkles, Youtube, Twitch,
+  Sun, Moon, ChevronRight, ChevronDown, User, MessageSquare, AudioLines, Sparkles, Youtube, Twitch,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "../context/AuthContext";
@@ -67,6 +67,18 @@ export default function Dashboard() {
   const [params, setParams] = useSearchParams();
 
   const [tab, setTab] = useState(params.get("tab") || "overview");
+  const [tabMenuOpen, setTabMenuOpen] = useState(false);
+  const tabMenuRef = useRef(null);
+  const activeTab = TABS.find((t) => t.id === tab);
+
+  useEffect(() => {
+    if (!tabMenuOpen) return;
+    const onClick = (e) => {
+      if (tabMenuRef.current && !tabMenuRef.current.contains(e.target)) setTabMenuOpen(false);
+    };
+    document.addEventListener("mousedown", onClick);
+    return () => document.removeEventListener("mousedown", onClick);
+  }, [tabMenuOpen]);
   const [query, setQuery] = useState("");
   const searchInput = useRef(null);
 
@@ -403,13 +415,43 @@ export default function Dashboard() {
       </aside>
 
       <div className="flex min-h-screen min-w-0 flex-1 flex-col md:pl-64">
-        <div data-testid="dashboard-mobile-tabs" className="sticky top-0 z-30 flex items-center gap-2 overflow-x-auto border-b border-white/10 bg-[#0d0714]/90 px-4 py-3 backdrop-blur [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:hidden">
-          <Link to="/" className="mr-2 font-display font-bold">dontblink</Link>
-          {TABS.map((t) => (
-            <button key={t.id} data-testid={`dash-tab-mobile-${t.id}`} onClick={() => setTab(t.id)} className={`shrink-0 rounded-full px-3.5 py-1.5 text-xs ${tab === t.id ? "bg-[#8B5CF6]/25 text-[#C4B5FD]" : "text-white/50"}`}>
-              {t.label}
+        <div data-testid="dashboard-mobile-bar" className="sticky top-0 z-30 flex items-center justify-between border-b border-white/10 bg-[#0d0714]/90 px-4 py-3 backdrop-blur md:hidden">
+          <Link to="/" data-testid="dash-mobile-brand" className="font-display font-bold">dontblink</Link>
+          <div ref={tabMenuRef} className="relative">
+            <button
+              data-testid="dash-tab-dropdown-toggle"
+              onClick={() => setTabMenuOpen((o) => !o)}
+              aria-label="dashboard sections"
+              className="flex items-center gap-1.5 rounded-full bg-[#8B5CF6]/25 px-3.5 py-1.5 text-xs font-medium text-[#C4B5FD] transition-colors hover:bg-[#8B5CF6]/35"
+            >
+              {activeTab?.label}
+              <ChevronDown size={13} className={`transition-transform duration-200 ${tabMenuOpen ? "rotate-180" : ""}`} />
             </button>
-          ))}
+            <AnimatePresence>
+              {tabMenuOpen && (
+                <motion.div
+                  data-testid="dash-tab-dropdown-panel"
+                  initial={{ opacity: 0, y: -6, scale: 0.97 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: -6, scale: 0.97 }}
+                  transition={{ duration: 0.2, ease }}
+                  className="absolute right-0 top-10 z-50 w-44 overflow-hidden rounded-2xl border border-white/10 bg-[#1a1123]/95 p-1.5 shadow-xl backdrop-blur-xl"
+                >
+                  {TABS.map((t) => (
+                    <button
+                      key={t.id}
+                      data-testid={`dash-tab-mobile-${t.id}`}
+                      onClick={() => { setTab(t.id); setTabMenuOpen(false); }}
+                      className={`flex w-full items-center justify-between rounded-xl px-3.5 py-2.5 text-sm transition-colors ${tab === t.id ? "bg-[#8B5CF6]/25 text-[#C4B5FD]" : "text-white/60 hover:bg-white/5 hover:text-white"}`}
+                    >
+                      {t.label}
+                      {tab === t.id && <Check size={13} />}
+                    </button>
+                  ))}
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
         </div>
 
         <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:px-8">
