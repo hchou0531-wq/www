@@ -219,6 +219,28 @@ def has_premium(u: dict) -> bool:
     return bool(u.get("theme_pack")) or is_owner(u)
 
 
+# severe terms: matched as substrings after leetspeak normalization (catches "nigga123", "n1gga", etc.)
+HARD_BANNED = [
+    "nigger", "nigga", "chink", "kike", "faggot", "spic", "gook", "wetback", "tranny",
+    "porn", "pornhub", "xvideos", "xnxx", "xhamster", "redtube", "youporn",
+    "onlyfans", "fansly", "chaturbate", "brazzers", "hentai", "rule34",
+]
+# ambiguous terms: whole-word only so "jewelry" and "fage" stay allowed
+WORD_BANNED = ["jew", "jews", "fag", "retard", "nsfw", "xxx", "tube8"]
+WORD_BANNED_RE = re.compile(r"\b(" + "|".join(WORD_BANNED) + r")\b", re.IGNORECASE)
+_LEET = str.maketrans({"1": "i", "0": "o", "3": "e", "4": "a", "5": "s", "7": "t", "$": "s", "@": "a", "!": "i"})
+
+
+def check_clean(text: str, field: str = "text"):
+    if not text:
+        return
+    if WORD_BANNED_RE.search(text):
+        raise HTTPException(400, f"that {field} isn't allowed here — keep it clean")
+    normalized = re.sub(r"[^a-z]", "", text.lower().translate(_LEET))
+    if any(w in normalized for w in HARD_BANNED):
+        raise HTTPException(400, f"that {field} isn't allowed here — keep it clean")
+
+
 async def verify_turnstile(token: str, request: Request):
     if not TURNSTILE_SECRET_KEY:
         return
@@ -280,6 +302,7 @@ async def register(body: RegisterBody, request: Request):
     email = body.email.strip().lower()
     if not USERNAME_RE.match(username):
         raise HTTPException(400, "Username must be 3-20 chars: letters, numbers, underscore")
+    check_clean(username, "username")
     if "@" not in email:
         raise HTTPException(400, "Invalid email")
     if len(body.password) < 6:
@@ -477,17 +500,53 @@ async def delete_account(body: DeleteBody, user: dict = Depends(current_user)):
         await send_email(to=user["email"], subject="your dontblink page is deleted", html=html)
     except Exception:
         pass
+    await wipe_user(user)
+    return {"ok": True}
+
+
+async def wipe_user(user: dict):
     if user.get("avatar_path"):
         await db.files.update_one({"storage_path": user["avatar_path"]}, {"$set": {"is_deleted": True}})
     if user.get("song_path"):
         await db.files.update_one({"storage_path": user["song_path"]}, {"$set": {"is_deleted": True}})
     await db.email_codes.delete_many({"email": user["email"]})
     await db.users.delete_one({"_id": user["_id"]})
+    deleted_uid = user.get("uid")
     if deleted_uid:
         await db.users.update_many({"uid": {"$gt": deleted_uid}}, {"$inc": {"uid": -1}})
         top = await db.users.find_one({}, sort=[("uid", -1)])
         await db.counters.update_one({"_id": "uid"}, {"$set": {"seq": top["uid"] if top else 0}}, upsert=True)
-    return {"ok": True}
+
+
+# ---------- Admin (owner only) ----------
+
+@api_router.get("/admin/user/{uid}")
+async def admin_lookup(uid: int, user: dict = Depends(current_user)):
+    if not is_owner(user):
+        raise HTTPException(403, "Owner only")
+    target = await db.users.find_one({"uid": uid})
+    if not target:
+        raise HTTPException(404, "No page with that number")
+    data = public_user(target)
+    data["email"] = target["email"]
+    data["verified"] = bool(target.get("email_verified"))
+    data["created_at"] = target.get("created_at")
+    return data
+
+
+@api_router.delete("/admin/user/{uid}")
+async def admin_delete(uid: int, user: dict = Depends(current_user)):
+    if not is_owner(user):
+        raise HTTPException(403, "Owner only")
+    target = await db.users.find_one({"uid": uid})
+    if not target:
+        raise HTTPException(404, "No page with that number")
+    if target["_id"] == user["_id"]:
+        raise HTTPException(400, "Use your own danger zone to delete yourself")
+    if is_owner(target):
+        raise HTTPException(400, "Can't delete another owner")
+    await wipe_user(target)
+    return {"ok": True, "deleted": target["username"]}
 
 
 @api_router.put("/auth/profile")
@@ -496,6 +555,13 @@ async def update_profile(body: ProfileUpdate, user: dict = Depends(current_user)
         raise HTTPException(400, "Display name too long")
     if len(body.bio) > 300:
         raise HTTPException(400, "Bio too long (300 chars max)")
+    check_clean(body.display_name, "display name")
+    check_clean(body.bio, "bio")
+    check_clean(body.favorite_track, "favorite song")
+    check_clean(body.pinned_track, "pinned track")
+    check_clean(body.youtube_input, "youtube link")
+    check_clean(body.twitch_channel, "twitch channel")
+    check_clean(body.lastfm_username, "last.fm username")
     if body.discord_id and not re.fullmatch(r"\d{15,22}", body.discord_id):
         raise HTTPException(400, "Discord ID must be a 15-22 digit number")
     if body.lastfm_username and len(body.lastfm_username) > 64:
@@ -513,6 +579,8 @@ async def update_profile(body: ProfileUpdate, user: dict = Depends(current_user)
             raise HTTPException(400, f"Link must start with http:// or https:// : {link.url}")
         if link.label and len(link.label) > 40:
             raise HTTPException(400, "Link label too long")
+        check_clean(link.url, "link")
+        check_clean(link.label, "link label")
     existing_clicks = {l.get("url"): l.get("clicks", 0) for l in user.get("links", [])}
     update = {
         "display_name": body.display_name.strip(),
@@ -549,6 +617,7 @@ async def change_username(body: UsernameChange, user: dict = Depends(current_use
     username = body.username.strip().lower()
     if not USERNAME_RE.match(username):
         raise HTTPException(400, "Username must be 3-20 chars: letters, numbers, underscore")
+    check_clean(username, "username")
     if username != user["username"]:
         last = user.get("username_changed_at")
         if last and not is_owner(user):

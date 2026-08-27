@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   LayoutGrid, Palette, Link2, Plug, Gem, Eye, Search, Copy, LogOut, ExternalLink,
   Share2, Plus, Trash2, ArrowUp, ArrowDown, ImagePlus, Lock, Check, MousePointerClick,
-  Sun, Moon, ChevronRight, ChevronDown, User, MessageSquare, AudioLines, Sparkles, Youtube, Twitch,
+  Sun, Moon, ChevronRight, ChevronDown, User, MessageSquare, AudioLines, Sparkles, Youtube, Twitch, ShieldCheck,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "../context/AuthContext";
@@ -69,8 +69,53 @@ export default function Dashboard() {
   const [tab, setTab] = useState(params.get("tab") || "overview");
   const [tabMenuOpen, setTabMenuOpen] = useState(false);
   const tabMenuRef = useRef(null);
-  const activeTab = TABS.find((t) => t.id === tab);
+  const isOwner = (user.roles || []).some((r) => r.id === "owner");
+  const allTabs = isOwner ? [...TABS, { id: "admin", label: "Admin", icon: ShieldCheck }] : TABS;
+  const activeTab = allTabs.find((t) => t.id === tab);
   const touchStart = useRef(null);
+
+  const [adminUid, setAdminUid] = useState("");
+  const [adminUser, setAdminUser] = useState(null);
+  const [adminError, setAdminError] = useState("");
+  const [adminBusy, setAdminBusy] = useState(false);
+  const [adminPreview, setAdminPreview] = useState(false);
+  const [adminConfirm, setAdminConfirm] = useState(false);
+  const [adminDeleteText, setAdminDeleteText] = useState("");
+
+  const adminLookup = async () => {
+    if (!adminUid || adminBusy) return;
+    setAdminBusy(true);
+    setAdminError("");
+    setAdminUser(null);
+    setAdminPreview(false);
+    setAdminConfirm(false);
+    setAdminDeleteText("");
+    try {
+      const r = await api.get(`/admin/user/${adminUid}`);
+      setAdminUser(r.data);
+    } catch (e) {
+      setAdminError(errMsg(e, "Lookup failed"));
+    } finally {
+      setAdminBusy(false);
+    }
+  };
+
+  const adminDelete = async () => {
+    if (adminDeleteText !== adminUser?.username || adminBusy) return;
+    setAdminBusy(true);
+    try {
+      await api.delete(`/admin/user/${adminUser.uid}`);
+      toast.success(`@${adminUser.username} deleted — everyone behind moved up a number`);
+      setAdminUser(null);
+      setAdminConfirm(false);
+      setAdminUid("");
+      setAdminDeleteText("");
+    } catch (e) {
+      toast.error(errMsg(e, "Could not delete"));
+    } finally {
+      setAdminBusy(false);
+    }
+  };
 
   const onTouchStart = (e) => {
     const t = e.touches?.[0] || e.changedTouches?.[0];
@@ -85,10 +130,10 @@ export default function Dashboard() {
     const dy = t.clientY - touchStart.current.y;
     touchStart.current = null;
     if (Math.abs(dx) < 70 || Math.abs(dy) > Math.abs(dx)) return;
-    const idx = TABS.findIndex((t) => t.id === tab);
+    const idx = allTabs.findIndex((t) => t.id === tab);
     const next = dx < 0 ? idx + 1 : idx - 1;
-    if (next >= 0 && next < TABS.length) {
-      setTab(TABS[next].id);
+    if (next >= 0 && next < allTabs.length) {
+      setTab(allTabs[next].id);
       setTabMenuOpen(false);
     }
   };
@@ -204,7 +249,6 @@ export default function Dashboard() {
   const pageUrl = `${window.location.origin}/${user.username}`;
   const lastChange = user.username_changed_at ? new Date(user.username_changed_at) : null;
   const nextChange = lastChange ? new Date(lastChange.getTime() + 30 * 24 * 3600 * 1000) : null;
-  const isOwner = (user.roles || []).some((r) => r.id === "owner");
   const coolingDown = !!(nextChange && nextChange > new Date() && !isOwner);
 
   useEffect(() => {
@@ -384,7 +428,7 @@ export default function Dashboard() {
   const doneCount = checklist.filter((c) => c.done).length;
   const pct = Math.round((doneCount / checklist.length) * 100);
 
-  const visibleTabs = TABS.filter((t) => t.label.toLowerCase().includes(query.toLowerCase()));
+  const visibleTabs = allTabs.filter((t) => t.label.toLowerCase().includes(query.toLowerCase()));
 
   const Card = ({ title, value, sub, icon: Icon, testid }) => (
     <div data-testid={testid} className="rounded-2xl border border-white/10 bg-[#1c1130]/80 p-5">
@@ -477,7 +521,7 @@ export default function Dashboard() {
                   transition={{ duration: 0.2, ease }}
                   className="absolute right-0 top-10 z-50 w-44 overflow-hidden rounded-2xl border border-white/10 bg-[#1a1123]/95 p-1.5 shadow-xl backdrop-blur-xl"
                 >
-                  {TABS.map((t) => (
+                  {allTabs.map((t) => (
                     <button
                       key={t.id}
                       data-testid={`dash-tab-mobile-${t.id}`}
@@ -994,6 +1038,77 @@ export default function Dashboard() {
                   )}
                 </section>
                 <SaveBtn />
+              </div>
+            )}
+
+            {tab === "admin" && isOwner && (
+              <div data-testid="admin-section" className="space-y-6">
+                <div>
+                  <h1 className="font-display text-xl font-bold sm:text-2xl">Admin selection</h1>
+                  <p className="mt-1 text-sm text-white/40">look up any page by its member number, preview it, and remove it if needed</p>
+                </div>
+                <div className="rounded-2xl border border-white/10 bg-[#1c1130]/60 p-5 sm:p-6">
+                  <div className="flex flex-col gap-2 sm:flex-row">
+                    <input
+                      data-testid="admin-uid-input"
+                      value={adminUid}
+                      onChange={(e) => setAdminUid(e.target.value.replace(/\D/g, ""))}
+                      onKeyDown={(e) => e.key === "Enter" && adminLookup()}
+                      placeholder="member number (uid)"
+                      inputMode="numeric"
+                      className={field}
+                    />
+                    <button data-testid="admin-lookup-btn" onClick={adminLookup} disabled={!adminUid || adminBusy} className="shrink-0 rounded-xl bg-[#8B5CF6] px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[#7C4DEF] disabled:opacity-40">
+                      {adminBusy ? "looking…" : "look up"}
+                    </button>
+                  </div>
+                  {adminError && <p data-testid="admin-error" className="mt-3 text-sm text-[#F87171]">{adminError}</p>}
+                  {adminUser && (
+                    <div data-testid="admin-user-card" className="mt-5 space-y-4">
+                      <div className="flex flex-wrap items-center gap-3">
+                        {adminUser.avatar_url ? (
+                          <img src={`${process.env.REACT_APP_BACKEND_URL}${adminUser.avatar_url}`} alt="" className="h-12 w-12 rounded-full object-cover" />
+                        ) : (
+                          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#8B5CF6]/20 text-[#A78BFA]"><User size={20} /></div>
+                        )}
+                        <div className="min-w-0">
+                          <p className="font-medium">@{adminUser.username} <span className="text-white/40">#{adminUser.uid}</span></p>
+                          <p className="truncate text-xs text-white/40">{adminUser.email} · {adminUser.views || 0} views · {adminUser.verified ? "verified" : "unverified"}</p>
+                        </div>
+                        <RolePills roles={adminUser.roles || []} />
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        <button data-testid="admin-preview-btn" onClick={() => setAdminPreview((p) => !p)} className="rounded-xl border border-white/15 px-4 py-2 text-sm text-white/70 transition-colors hover:bg-white/5 hover:text-white">
+                          {adminPreview ? "hide preview" : "preview page"}
+                        </button>
+                        <a data-testid="admin-open-page" href={`/${adminUser.username}`} target="_blank" rel="noreferrer" className="rounded-xl border border-white/15 px-4 py-2 text-sm text-white/70 transition-colors hover:bg-white/5 hover:text-white">
+                          open page
+                        </a>
+                        {!adminConfirm && (
+                          <button data-testid="admin-delete-btn" onClick={() => setAdminConfirm(true)} className="rounded-xl border border-red-500/30 px-4 py-2 text-sm text-red-300 transition-colors hover:bg-red-500/10">
+                            delete page
+                          </button>
+                        )}
+                      </div>
+                      {adminPreview && (
+                        <div data-testid="admin-preview-frame" className="overflow-hidden rounded-2xl border border-white/10">
+                          <iframe src={`/${adminUser.username}`} title="page preview" className="h-[480px] w-full bg-white" />
+                        </div>
+                      )}
+                      {adminConfirm && (
+                        <div className="space-y-3 rounded-xl border border-red-500/20 bg-red-500/5 p-4">
+                          <p className="text-xs text-red-200/80">type <span className="font-mono font-medium text-red-200">{adminUser.username}</span> to confirm — everyone behind them moves up a number</p>
+                          <div className="flex flex-col gap-2 sm:flex-row">
+                            <input data-testid="admin-delete-confirm-input" value={adminDeleteText} onChange={(e) => setAdminDeleteText(e.target.value)} placeholder={adminUser.username} className={`${field} font-mono`} />
+                            <button data-testid="admin-delete-confirm-btn" onClick={adminDelete} disabled={adminDeleteText !== adminUser.username || adminBusy} className="shrink-0 rounded-xl bg-red-500 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-red-600 disabled:opacity-40">
+                              {adminBusy ? "deleting…" : "delete forever"}
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
               </div>
             )}
 

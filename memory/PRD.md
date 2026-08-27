@@ -185,6 +185,11 @@ User choices: Discord linked by pasting user ID (no OAuth keys); Last.fm API key
 - After key swap: verification code, welcome email, password reset code and weekly digest all send cleanly (verified via register→verify flow and digest-test, zero email errors in logs).
 - Welcome email: fires once on first successful verify-email, links to the user's new page.
 
+## Implemented (2026-07, iteration 37)
+- Admin selection (owner-only dashboard tab): look up any page by UID, see account card (email, views, verified, roles), live iframe preview of the page, delete with type-username confirm. GET/DELETE /api/admin/user/{uid}; non-owners 403, self/other-owner deletes blocked, shared wipe_user renumbers UIDs. Verified: deleted the slur test account via admin API, preview iframe renders, non-owner blocked.
+- Content censoring: check_clean() applied to username (register + change), display name, bio, favorite/pinned track, YouTube/Twitch/Last.fm fields, link URLs + labels. Two-tier: severe slurs/porn terms matched as substrings after leetspeak normalization (catches n1gga, nigga123); ambiguous terms (jew, fag, xxx…) whole-word only so "jewelry" passes. Adult domains (pornhub, xvideos, onlyfans…) blocked in links. NOTE: no vision API available — uploaded image/video CONTENT is not scanned; censoring covers text, usernames, links and domains.
+
+
 
 
 
