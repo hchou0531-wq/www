@@ -190,6 +190,10 @@ User choices: Discord linked by pasting user ID (no OAuth keys); Last.fm API key
 - Content censoring: check_clean() applied to username (register + change), display name, bio, favorite/pinned track, YouTube/Twitch/Last.fm fields, link URLs + labels. Two-tier: severe slurs/porn terms matched as substrings after leetspeak normalization (catches n1gga, nigga123); ambiguous terms (jew, fag, xxx…) whole-word only so "jewelry" passes. Adult domains (pornhub, xvideos, onlyfans…) blocked in links. NOTE: no vision API available — uploaded image/video CONTENT is not scanned; censoring covers text, usernames, links and domains.
 
 
+## Implemented (2026-07, iteration 38)
+- Admin user list: GET /api/admin/users (owner only) + scrollable "all pages" list in the Admin section — avatar, username, uid, views, verified check; clicking a row loads it into the lookup card and syncs the UID input. List refreshes after admin deletion (UIDs renumber live — dntblink moved #5→#4 when other accounts were deleted in the wild).
+
+
 
 
 

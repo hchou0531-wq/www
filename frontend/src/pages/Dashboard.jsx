@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   LayoutGrid, Palette, Link2, Plug, Gem, Eye, Search, Copy, LogOut, ExternalLink,
   Share2, Plus, Trash2, ArrowUp, ArrowDown, ImagePlus, Lock, Check, MousePointerClick,
-  Sun, Moon, ChevronRight, ChevronDown, User, MessageSquare, AudioLines, Sparkles, Youtube, Twitch, ShieldCheck,
+  Sun, Moon, ChevronRight, ChevronDown, User, MessageSquare, AudioLines, Sparkles, Youtube, Twitch, ShieldCheck, BadgeCheck,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "../context/AuthContext";
@@ -81,6 +81,30 @@ export default function Dashboard() {
   const [adminPreview, setAdminPreview] = useState(false);
   const [adminConfirm, setAdminConfirm] = useState(false);
   const [adminDeleteText, setAdminDeleteText] = useState("");
+  const [adminList, setAdminList] = useState(null);
+
+  const loadAdminList = async () => {
+    try {
+      const r = await api.get("/admin/users");
+      setAdminList(r.data);
+    } catch {
+      setAdminList([]);
+    }
+  };
+
+  useEffect(() => {
+    if (tab === "admin" && isOwner && adminList === null) loadAdminList();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tab, isOwner]);
+
+  const pickAdminUser = (u) => {
+    setAdminUser(u);
+    setAdminUid(String(u.uid));
+    setAdminError("");
+    setAdminPreview(false);
+    setAdminConfirm(false);
+    setAdminDeleteText("");
+  };
 
   const adminLookup = async () => {
     if (!adminUid || adminBusy) return;
@@ -110,6 +134,7 @@ export default function Dashboard() {
       setAdminConfirm(false);
       setAdminUid("");
       setAdminDeleteText("");
+      loadAdminList();
     } catch (e) {
       toast.error(errMsg(e, "Could not delete"));
     } finally {
@@ -1108,6 +1133,31 @@ export default function Dashboard() {
                       )}
                     </div>
                   )}
+                  <div className="mt-5 border-t border-white/10 pt-4">
+                    <p className="mb-2 text-xs font-medium uppercase tracking-[0.16em] text-white/40">all pages{adminList ? ` (${adminList.length})` : ""}</p>
+                    <div data-testid="admin-user-list" className="max-h-72 space-y-1 overflow-y-auto pr-1 [scrollbar-width:thin]">
+                      {adminList === null && <p className="px-3 py-2 text-xs text-white/30">loading…</p>}
+                      {adminList && adminList.length === 0 && <p className="px-3 py-2 text-xs text-white/30">no pages yet</p>}
+                      {(adminList || []).map((u) => (
+                        <button
+                          key={u.uid}
+                          data-testid={`admin-list-user-${u.uid}`}
+                          onClick={() => pickAdminUser(u)}
+                          className={`flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left transition-colors ${adminUser?.uid === u.uid ? "bg-[#8B5CF6]/20" : "hover:bg-white/5"}`}
+                        >
+                          {u.avatar_url ? (
+                            <img src={`${process.env.REACT_APP_BACKEND_URL}${u.avatar_url}`} alt="" className="h-7 w-7 rounded-full object-cover" />
+                          ) : (
+                            <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[#8B5CF6]/20 text-[#A78BFA]"><User size={13} /></span>
+                          )}
+                          <span className="min-w-0 flex-1 truncate text-sm">@{u.username}</span>
+                          <span className="text-[11px] text-white/40">#{u.uid}</span>
+                          <span className="hidden text-[11px] text-white/30 sm:inline">{u.views || 0} views</span>
+                          {u.verified && <BadgeCheck size={12} className="shrink-0 text-[#8B5CF6]" />}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                 </div>
               </div>
             )}

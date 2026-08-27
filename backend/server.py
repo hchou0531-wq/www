@@ -549,6 +549,20 @@ async def admin_delete(uid: int, user: dict = Depends(current_user)):
     return {"ok": True, "deleted": target["username"]}
 
 
+@api_router.get("/admin/users")
+async def admin_users(user: dict = Depends(current_user)):
+    if not is_owner(user):
+        raise HTTPException(403, "Owner only")
+    users = await db.users.find({}).sort("uid", 1).to_list(500)
+    out = []
+    for t in users:
+        data = public_user(t)
+        data["email"] = t["email"]
+        data["verified"] = bool(t.get("email_verified"))
+        out.append(data)
+    return out
+
+
 @api_router.put("/auth/profile")
 async def update_profile(body: ProfileUpdate, user: dict = Depends(current_user)):
     if len(body.display_name) > 60:
